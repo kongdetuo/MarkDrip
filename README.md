@@ -1,6 +1,6 @@
 # MarkDrip
 
-**流式 Markdown 渲染引擎** — 专为大语言模型（LLM）逐 token 输出场景设计。
+**流式 Markdown 渲染引擎** — 专为大语言模型（LLM）逐 token 输出场景设计，基于 **Avalonia UI 框架**。
 
 > MarkDrip 像水滴一样，一滴一滴地接收 Markdown，实时渲染出完整的排版效果。
 
@@ -45,6 +45,13 @@
 - **实时 UI 更新** — `INotifyPropertyChanged` 驱动 Avalonia 控件增量刷新
 - **递归嵌套** — 引用内可含任意块类型，列表可嵌套到任意深度
 - **块生命周期** — `Open → Finalized`，渲染控件实时跟踪
+
+### UI 框架
+
+- 基于 **Avalonia 11**，跨平台（Windows / Linux / macOS）
+- `MarkdownView` 控件 — 数据绑定驱动，开箱即用
+- 每个块类型对应独立渲染控件，支持增量逐字符刷新
+- 演示项目 `MarkDrip.Demo` 提供完整的流式模拟界面
 
 ---
 
@@ -202,13 +209,14 @@ MarkDrip/
 │   └── InlineElement.cs       # 内联元素类型
 ├── Parser/          # 流式解析器
 │   ├── IBlockParser.cs        # 解析器接口 + StreamParser 调度器
+│   ├── ...                    # 各块类型解析器
 │   ├── InlineParser.cs        # 内联解析器
 │   └── LineBuffer.cs          # 分段存储缓冲区
 ├── Controls/        # Avalonia 渲染控件
-│   └── MarkdownView.cs
-├── MarkDrip.Demo/   # 桌面演示应用
+│   └── MarkdownView.cs        # 主控件，数据绑定驱动增量渲染
+├── MarkDrip.Demo/   # Avalonia 桌面演示应用
 │   └── MainWindow.cs          # 流式模拟器
-├── MarkDrip.Tests/  # 单元测试（367+ 用例）
+├── MarkDrip.Tests/  # 单元测试（380+ 用例）
 └── docs/
     └── decisions/             # 架构决策记录
 ```
