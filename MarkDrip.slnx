@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="MarkDrip/MarkDrip.csproj" />
+  <Project Path="MarkDrip.Tests/MarkDrip.Tests.csproj" />
+  <Project Path="MarkDrip.Demo/MarkDrip.Demo.csproj" />
+</Solution>
