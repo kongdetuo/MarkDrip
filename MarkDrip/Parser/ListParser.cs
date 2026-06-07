@@ -67,7 +67,7 @@ class ListParser : IBlockParser
         _itemParser.Reset();
     }
 
-    public AppendResult Append(ReadOnlySpan<char> chunk, ParserContext context)
+    public AppendResult Append(TextChuck chunk, ParserContext context)
     {
         var list = context.PreviousBlock as ListBlock;
 
@@ -75,23 +75,23 @@ class ListParser : IBlockParser
         if (_itemParser.InnerParser == null)
         {
             StartNewItem(list!);
-            _itemParser.FeedFirstLineContent(chunk);
+            _itemParser.FeedFirstLineContent(chunk.Text);
             return AppendResult.KeepFeeding;
         }
 
         // ── 2. 同级别新标记 ──
-        if (IsSameMarker(chunk))
+        if (IsSameMarker(chunk.Text))
         {
             int blc = _itemParser.BlankLineCount;
             if (blc >= 2) { _itemParser.Reset(); _lastList = null; return AppendResult.YieldLine; }
             if (blc == 1) list!.IsLoose = true;
             StartNewItem(list!);
-            FeedContentAfterMarker(chunk);
+            FeedContentAfterMarker(chunk.Text);
             return AppendResult.KeepFeeding;
         }
 
         // ── 3. 委托给 ItemParser 全权路由 ──
-        return _itemParser.Forward(chunk, context);
+        return _itemParser.Forward(chunk.Text, context);
     }
 
     public void Complete(ParserContext context)

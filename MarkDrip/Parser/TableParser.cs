@@ -63,7 +63,7 @@ class TableParser : IBlockParser
         _cellIndex = -1;
     }
 
-    public AppendResult Append(ReadOnlySpan<char> chunk, ParserContext context)
+    public AppendResult Append(TextChuck chunk, ParserContext context)
     {
         if (_skipFirstLine)
         {
@@ -139,7 +139,7 @@ class TableParser : IBlockParser
             contentStarted = _cellIndex >= 0 && _pendingRow.Cells[_cellIndex].Inlines.RawBuffer.Length > 0;
 
         // Process each character in the chunk
-        foreach (char c in chunk.ToString())
+        foreach (char c in chunk.Text.ToString())
         {
             if (c == '|')
             {

@@ -21,25 +21,25 @@ class AtxHeaderParser : IBlockParser
         _initialContentProcessed = false;
     }
 
-    public AppendResult Append(ReadOnlySpan<char> chunk, ParserContext context)
+    public AppendResult Append(TextChuck chunk, ParserContext context)
     {
         if (context.PreviousBlock is not HeadingBlock heading)
             return AppendResult.NeedMatch;
 
-        var hasNewline = chunk.Contains('\n') || chunk.Contains('\r');
+        var hasNewline = chunk.Text.Contains('\n') || chunk.Text.Contains('\r');
 
         if (!_initialContentProcessed)
         {
             _initialContentProcessed = true;
             // 首次调用：提取标题文本（去除 # 标记和尾部空格 / #）
-            var text = ExtractHeadingText(chunk);
+            var text = ExtractHeadingText(chunk.Text);
             if (text.Length > 0)
                 heading.Inlines.Append(text);
         }
         else
         {
             // 续接内容（极少发生，仅当标题文本被拆到多个 chunk 时）
-            var content = TextUtils.StripTrailingNewline(chunk);
+            var content = TextUtils.StripTrailingNewline(chunk.Text);
             if (content.Length > 0)
                 heading.Inlines.Append(content.ToString());
         }

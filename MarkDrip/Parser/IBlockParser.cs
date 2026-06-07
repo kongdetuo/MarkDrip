@@ -10,9 +10,22 @@ interface IBlockParser
     /// <summary>TryMatch 返回 FullMatch 后调用。解析器在此初始化状态，内容写入统一走 Append。</summary>
     void OnMatch(ReadOnlySpan<char> line, ParserContext context);
     /// <summary>追加数据。返回 KeepFeeding 表示还可继续接收当前块，NeedMatch 表示当前行处理完毕需重新匹配。</summary>
-    AppendResult Append(ReadOnlySpan<char> chunk, ParserContext context);
+    AppendResult Append(TextChuck chunk, ParserContext context);
     /// <summary>通知解析器输入结束。用于定稿仍处于 Open 的块、Seal InlineCollection。</summary>
     void Complete(ParserContext context) { }
+}
+
+public readonly ref struct TextChuck
+{
+    public readonly ReadOnlySpan<char> Text;
+    public readonly bool IsLineStart;
+    public readonly bool IsLineEnd;
+    public TextChuck(ReadOnlySpan<char> text, bool isLineStart, bool isLineEnd)
+    {
+        Text = text;
+        IsLineStart = isLineStart;
+        IsLineEnd = isLineEnd;
+    }
 }
 
 enum AppendResult

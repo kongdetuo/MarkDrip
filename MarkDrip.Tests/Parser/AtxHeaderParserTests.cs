@@ -194,7 +194,7 @@ public class AtxHeaderParserTests
         var ctx = new ParserContext();
         parser.OnMatch(line, ctx);
 
-        var completed = parser.Append(line, ctx);
+        var completed = parser.Append(new TextChuck(line, false, false), ctx);
 
         Assert.AreEqual(AppendResult.NeedMatch, completed);
         var heading = (HeadingBlock)ctx.Blocks[0];
@@ -209,7 +209,7 @@ public class AtxHeaderParserTests
         var line = "## Heading ##\n";
         parser.OnMatch(line, ctx);
 
-        var completed = parser.Append(line, ctx);
+        var completed = parser.Append(new TextChuck(line, false, false), ctx);
 
         Assert.AreEqual(AppendResult.NeedMatch, completed);
         var heading = (HeadingBlock)ctx.Blocks[0];
@@ -224,7 +224,7 @@ public class AtxHeaderParserTests
         var line = "## Heading ###\n";
         parser.OnMatch(line, ctx);
 
-        parser.Append(line, ctx);
+        parser.Append(new TextChuck(line, false, false), ctx);
 
         var heading = (HeadingBlock)ctx.Blocks[0];
         Assert.AreEqual("Heading", GetInlinesText(heading.Inlines));
@@ -238,7 +238,7 @@ public class AtxHeaderParserTests
         var line = "# \n";
         parser.OnMatch(line, ctx);
 
-        var completed = parser.Append(line, ctx);
+        var completed = parser.Append(new TextChuck(line, false, false), ctx);
 
         Assert.AreEqual(AppendResult.NeedMatch, completed);
         var heading = (HeadingBlock)ctx.Blocks[0];
@@ -253,7 +253,7 @@ public class AtxHeaderParserTests
         var line = "#\n";
         parser.OnMatch(line, ctx);
 
-        var completed = parser.Append(line, ctx);
+        var completed = parser.Append(new TextChuck(line, false, false), ctx);
 
         Assert.AreEqual(AppendResult.NeedMatch, completed);
         var heading = (HeadingBlock)ctx.Blocks[0];
@@ -268,7 +268,7 @@ public class AtxHeaderParserTests
         var line = "# Hello";
         parser.OnMatch(line, ctx);
 
-        var completed = parser.Append(line, ctx);
+        var completed = parser.Append(new TextChuck(line, false, false), ctx);
 
         Assert.AreEqual(AppendResult.KeepFeeding, completed);
         var heading = (HeadingBlock)ctx.Blocks[0];
@@ -282,7 +282,7 @@ public class AtxHeaderParserTests
         var ctx = new ParserContext();
         parser.OnMatch("# Hello\n", ctx);
 
-        var completed = parser.Append("# Hello\n", ctx);
+        var completed = parser.Append(new TextChuck("# Hello\n", false, false), ctx);
 
         Assert.AreEqual(AppendResult.NeedMatch, completed);
     }
@@ -295,7 +295,7 @@ public class AtxHeaderParserTests
         var line = "# Hello *World*\n";
         parser.OnMatch(line, ctx);
 
-        parser.Append(line, ctx);
+        parser.Append(new TextChuck(line, false, false), ctx);
 
         var heading = (HeadingBlock)ctx.Blocks[0];
         // 原始缓冲区保留完整内容（含 *）
@@ -310,10 +310,10 @@ public class AtxHeaderParserTests
         parser.OnMatch("# hi", ctx);
 
         // Prior Append without newline
-        parser.Append("# hi", ctx);
+        parser.Append(new TextChuck("# hi", false, false), ctx);
 
         // Newline-only chunk
-        var completed = parser.Append("\n", ctx);
+        var completed = parser.Append(new TextChuck("\n", false, false), ctx);
 
         Assert.AreEqual(AppendResult.NeedMatch, completed);
         // Content unchanged
@@ -333,10 +333,10 @@ public class AtxHeaderParserTests
         parser.OnMatch("## Hel", ctx);
 
         // First call with same line (no newline)
-        parser.Append("## Hel", ctx);
+        parser.Append(new TextChuck("## Hel", false, false), ctx);
 
         // Continuation
-        var completed = parser.Append("lo\n", ctx);
+        var completed = parser.Append(new TextChuck("lo\n", false, false), ctx);
 
         Assert.AreEqual(AppendResult.NeedMatch, completed);
         var heading = (HeadingBlock)ctx.Blocks[0];
@@ -349,9 +349,9 @@ public class AtxHeaderParserTests
         var parser = new AtxHeaderParser();
         var ctx = new ParserContext();
         parser.OnMatch("# He", ctx);
-        parser.Append("# He", ctx);
+        parser.Append(new TextChuck("# He", false, false), ctx);
 
-        var completed = parser.Append("llo", ctx);
+        var completed = parser.Append(new TextChuck("llo", false, false), ctx);
 
         Assert.AreEqual(AppendResult.KeepFeeding, completed);
     }
@@ -362,9 +362,9 @@ public class AtxHeaderParserTests
         var parser = new AtxHeaderParser();
         var ctx = new ParserContext();
         parser.OnMatch("# He", ctx);
-        parser.Append("# He", ctx);
+        parser.Append(new TextChuck("# He", false, false), ctx);
 
-        var completed = parser.Append("llo\n", ctx);
+        var completed = parser.Append(new TextChuck("llo\n", false, false), ctx);
 
         Assert.AreEqual(AppendResult.NeedMatch, completed);
         var heading = (HeadingBlock)ctx.Blocks[0];
@@ -377,11 +377,11 @@ public class AtxHeaderParserTests
         var parser = new AtxHeaderParser();
         var ctx = new ParserContext();
         parser.OnMatch("## A", ctx);
-        parser.Append("## A", ctx);     // first = "A"
-        parser.Append("B", ctx);        // continuation
-        parser.Append("C", ctx);        // continuation
+        parser.Append(new TextChuck("## A", false, false), ctx);     // first = "A"
+        parser.Append(new TextChuck("B", false, false), ctx);        // continuation
+        parser.Append(new TextChuck("C", false, false), ctx);        // continuation
 
-        var completed = parser.Append("D\n", ctx);
+        var completed = parser.Append(new TextChuck("D\n", false, false), ctx);
 
         Assert.AreEqual(AppendResult.NeedMatch, completed);
         var heading = (HeadingBlock)ctx.Blocks[0];
@@ -563,7 +563,7 @@ public class AtxHeaderParserTests
         var ctx = new ParserContext();
         ctx.Blocks.Add(new ParagraphBlock()); // wrong block type
 
-        var result = parser.Append("# text\n", ctx);
+        var result = parser.Append(new TextChuck("# text\n", false, false), ctx);
 
         Assert.AreEqual(AppendResult.NeedMatch, result, "Should return NeedMatch to relinquish control when block type mismatch");
     }

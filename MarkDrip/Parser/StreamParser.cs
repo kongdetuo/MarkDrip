@@ -69,7 +69,7 @@ class StreamParser
                 int lineLenBeforeAppend = _currentLine.Length;
                 _currentLine.Append(segment);
 
-                var result_ = currentParser.Append(segment, context);
+                var result_ = currentParser.Append(new TextChuck(segment, false, false), context);
                 if (result_ == AppendResult.NeedMatch)
                     currentParser = null;
                 else if (result_ == AppendResult.YieldLine)
@@ -107,13 +107,13 @@ class StreamParser
                     _pendingBuffer.Clear();
                     var parser = matchResults.First(m => m.Item2 == MatchResult.FullMatch).Item1;
                     parser.OnMatch(lineStr, context);
-                    currentParser = parser.Append(lineStr, context) == AppendResult.NeedMatch ? null : parser;
+                    currentParser = parser.Append(new TextChuck(lineStr, false, false), context) == AppendResult.NeedMatch ? null : parser;
                 }
                 else if (allNoMatch)
                 {
                     _pendingBuffer.Clear();
                     paragraphParser.OnMatch(lineStr, context);
-                    currentParser = paragraphParser.Append(lineStr, context) == AppendResult.NeedMatch ? null : paragraphParser;
+                    currentParser = paragraphParser.Append(new TextChuck(lineStr, false, false), context) == AppendResult.NeedMatch ? null : paragraphParser;
                 }
             }
 

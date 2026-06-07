@@ -40,7 +40,7 @@ class BlockQuoteParser : IBlockParser
         _innerParser = new StreamParser(quote.Children);
     }
 
-    public AppendResult Append(ReadOnlySpan<char> chunk, ParserContext context)
+    public AppendResult Append(TextChuck chunk, ParserContext context)
     {
         if (_innerParser == null)
             return AppendResult.NeedMatch;
@@ -54,26 +54,26 @@ class BlockQuoteParser : IBlockParser
         if (!StartsWithGt(head, out int prefixLen))
         {
             // 无 > 前缀：空白行 → 结束引用；内容 → 惰性延续
-            if (chunk.IsWhiteSpace() && (chunk.Contains('\n') || chunk.Contains('\r')))
+            if (chunk.Text.IsWhiteSpace() && (chunk.Text.Contains('\n') || chunk.Text.Contains('\r')))
             {
-                _innerParser.Feed(chunk);
+                _innerParser.Feed(chunk.Text);
                 return AppendResult.NeedMatch;
             }
-            _innerParser.Feed(chunk);
+            _innerParser.Feed(chunk.Text);
             return AppendResult.KeepFeeding;
         }
 
         // ── 有 > 前缀 → 剥离前缀，增量喂送 ──
         // LLB 中 prefixLen 之前的字符是前缀。chunk 已被 StreamParser 追加到 LLB 末尾，
         // chunkStart = lb.Length - chunk.Length 即 chunk 在整行中的起始位置。
-        int chunkStart = lb.Length - chunk.Length;
+        int chunkStart = lb.Length - chunk.Text.Length;
 
         if (chunkStart >= prefixLen)
         {
             // chunk 完全在前缀之后 → 全量喂送
-            _innerParser.Feed(chunk);
+            _innerParser.Feed(chunk.Text);
         }
-        else if (chunkStart + chunk.Length <= prefixLen)
+        else if (chunkStart + chunk.Text.Length <= prefixLen)
         {
             // chunk 完全在前缀之内 → 丢弃（> 或 > 后的空格）
         }
@@ -81,7 +81,7 @@ class BlockQuoteParser : IBlockParser
         {
             // 部分重叠 → 只喂前缀之后的子串
             int contentOffset = prefixLen - chunkStart;
-            _innerParser.Feed(chunk[contentOffset..]);
+            _innerParser.Feed(chunk.Text[contentOffset..]);
         }
 
         // LLB 由 StreamParser.Feed 在行完结时统一清理，解析器不做修改

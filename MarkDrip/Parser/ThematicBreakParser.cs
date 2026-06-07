@@ -53,7 +53,7 @@ class ThematicBreakParser : IBlockParser
         context.Blocks.Add(new ThematicBreakBlock());
     }
 
-    public AppendResult Append(ReadOnlySpan<char> chunk, ParserContext context)
+    public AppendResult Append(TextChuck chunk, ParserContext context)
     {
         return AppendResult.NeedMatch;
     }

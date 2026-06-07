@@ -24,7 +24,7 @@ class CodeBlockParser : IBlockParser
         context.Blocks.Add(new CodeBlock { InfoStringPending = true });
     }
 
-    public AppendResult Append(ReadOnlySpan<char> chunk, ParserContext context)
+    public AppendResult Append(TextChuck chunk, ParserContext context)
     {
         if (context.PreviousBlock is not CodeBlock code)
             return AppendResult.NeedMatch;
@@ -32,15 +32,15 @@ class CodeBlockParser : IBlockParser
         // ── 首次 Append：解析开围栏，不论是否完结都不转发此行 ──
         if (code.InfoStringPending)
         {
-            if (ParseOpenFence(code, chunk, context))
+            if (ParseOpenFence(code, chunk.Text, context))
                 code.InfoStringPending = false;
             return AppendResult.KeepFeeding;
         }
 
         // ── 正常转发内容 ──
-        code.AppendContent(chunk);
+        code.AppendContent(chunk.Text);
 
-        if (chunk.Contains('\n'))
+        if (chunk.Text.Contains('\n'))
         {
             var lb = context.LastLineBuffer;
             int end = lb.Length;

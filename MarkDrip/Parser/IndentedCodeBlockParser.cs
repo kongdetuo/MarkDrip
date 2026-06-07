@@ -41,7 +41,7 @@ class IndentedCodeBlockParser : IBlockParser
         AppendLineContent(code, line);
     }
 
-    public AppendResult Append(ReadOnlySpan<char> chunk, ParserContext context)
+    public AppendResult Append(TextChuck chunk, ParserContext context)
     {
         if (context.PreviousBlock is not CodeBlock code)
             return AppendResult.NeedMatch;
@@ -54,7 +54,7 @@ class IndentedCodeBlockParser : IBlockParser
         }
 
         // ── Blank line → buffer ──
-        if (TextUtils.IsBlankLine(chunk))
+        if (TextUtils.IsBlankLine(chunk.Text))
         {
             _blankLineCount++;
             return AppendResult.KeepFeeding;
@@ -63,11 +63,11 @@ class IndentedCodeBlockParser : IBlockParser
         // ── 有悬而未决的空白行 ──
         if (_blankLineCount > 0)
         {
-            if (TextUtils.CountLeadingSpaces(chunk) >= 4)
+            if (TextUtils.CountLeadingSpaces(chunk.Text) >= 4)
             {
                 // 续行：空白属于块内 chunk 分隔，flush 到内容中
                 FlushBlankLines(code);
-                AppendLineContent(code, chunk);
+                AppendLineContent(code, chunk.Text);
                 _blankLineCount = 0;
                 return AppendResult.KeepFeeding;
             }
@@ -79,9 +79,9 @@ class IndentedCodeBlockParser : IBlockParser
         }
 
         // ── 缩进的内容行 ──
-        if (TextUtils.CountLeadingSpaces(chunk) >= 4)
+        if (TextUtils.CountLeadingSpaces(chunk.Text) >= 4)
         {
-            AppendLineContent(code, chunk);
+            AppendLineContent(code, chunk.Text);
             return AppendResult.KeepFeeding;
         }
 

@@ -112,7 +112,7 @@ public class ThematicBreakParserTests
     {
         var parser = new ThematicBreakParser();
 
-        var result = parser.Append("anything\n", new ParserContext());
+        var result = parser.Append(new TextChuck("anything\n", false, false), new ParserContext());
 
         Assert.AreEqual(AppendResult.NeedMatch, result);
     }

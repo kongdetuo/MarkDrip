@@ -101,7 +101,7 @@ public class BlockQuoteParserTests
         var ctx = new ParserContext(new LineBufferView(buffer));
         parser.OnMatch("> text\n", ctx);
 
-        var result = parser.Append("> text\n", ctx);
+        var result = parser.Append(new TextChuck("> text\n", false, false), ctx);
 
         Assert.AreEqual(AppendResult.KeepFeeding, result);
         var quote = (BlockQuoteBlock)ctx.Blocks[0];
@@ -119,7 +119,7 @@ public class BlockQuoteParserTests
         var ctx = new ParserContext(new LineBufferView(buffer));
         parser.OnMatch("  > text\n", ctx);
 
-        parser.Append("  > text\n", ctx);
+        parser.Append(new TextChuck("  > text\n", false, false), ctx);
 
         var quote = (BlockQuoteBlock)ctx.Blocks[0];
         var para = (ParagraphBlock)quote.Children[0];
@@ -135,11 +135,11 @@ public class BlockQuoteParserTests
         parser.OnMatch("> quote\n", ctx);
 
         buffer.Append("> quote\n");
-        parser.Append("> quote\n", ctx);
+        parser.Append(new TextChuck("> quote\n", false, false), ctx);
         buffer.Clear(); // 模拟 StreamParser 的行完结清理
 
         buffer.Append("lazy continuation\n");
-        var result = parser.Append("lazy continuation\n", ctx);
+        var result = parser.Append(new TextChuck("lazy continuation\n", false, false), ctx);
 
         Assert.AreEqual(AppendResult.KeepFeeding, result);
         var quote = (BlockQuoteBlock)ctx.Blocks[0];
@@ -153,9 +153,9 @@ public class BlockQuoteParserTests
         var parser = new BlockQuoteParser();
         var ctx = new ParserContext();
         parser.OnMatch("> text\n", ctx);
-        parser.Append("> text\n", ctx);
+        parser.Append(new TextChuck("> text\n", false, false), ctx);
 
-        var result = parser.Append("\n", ctx);
+        var result = parser.Append(new TextChuck("\n", false, false), ctx);
 
         Assert.AreEqual(AppendResult.NeedMatch, result, "Blank line without > should end quote");
     }
@@ -166,10 +166,10 @@ public class BlockQuoteParserTests
         var parser = new BlockQuoteParser();
         var ctx = new ParserContext();
         parser.OnMatch("> text\n", ctx);
-        parser.Append("> text\n", ctx);
+        parser.Append(new TextChuck("> text\n", false, false), ctx);
 
         // >\n (empty prefix line) stays in quote
-        var result = parser.Append(">\n", ctx);
+        var result = parser.Append(new TextChuck(">\n", false, false), ctx);
 
         Assert.AreEqual(AppendResult.KeepFeeding, result);
     }
@@ -317,7 +317,7 @@ public class BlockQuoteParserTests
         foreach (char c in "> text\n")
         {
             buffer.Append(c.ToString());
-            result = parser.Append(c.ToString(), ctx);
+            result = parser.Append(new TextChuck(c.ToString(), false, false), ctx);
         }
 
         Assert.AreEqual(AppendResult.KeepFeeding, result);
@@ -336,10 +336,12 @@ public class BlockQuoteParserTests
 
         // Stream "> hello\n" character by character
         foreach (char c in "> hello\n")
-            parser.Append(c.ToString(), ctx);
+        {
+            parser.Append(new TextChuck(c.ToString(), false, false), ctx);
+        }
 
         // Then blank line
-        var result = parser.Append("\n", ctx);
+        var result = parser.Append(new TextChuck("\n", false, false), ctx);
 
         Assert.AreEqual(AppendResult.NeedMatch, result, "Blank line should end the quote");
     }
@@ -356,14 +358,14 @@ public class BlockQuoteParserTests
         foreach (char c in "> first\n")
         {
             buffer.Append(c.ToString());
-            parser.Append(c.ToString(), ctx);
+            parser.Append(new TextChuck(c.ToString(), false, false), ctx);
         }
         buffer.Clear(); // 行完结清理
 
         foreach (char c in "> second\n")
         {
             buffer.Append(c.ToString());
-            parser.Append(c.ToString(), ctx);
+            parser.Append(new TextChuck(c.ToString(), false, false), ctx);
         }
 
         var quote = (BlockQuoteBlock)ctx.Blocks[0];

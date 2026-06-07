@@ -14,10 +14,10 @@ class ParagraphParser : IBlockParser
         // _needsLineBreak 需要保留到 Append 中判断。
     }
 
-    public AppendResult Append(ReadOnlySpan<char> chunk, ParserContext context)
+    public AppendResult Append(TextChuck chunk, ParserContext context)
     {
         // 纯空白行（含换行符）
-        if (chunk.IsWhiteSpace() && (chunk.Contains('\n') || chunk.Contains('\r')))
+        if (chunk.Text.IsWhiteSpace() && (chunk.Text.Contains('\n') || chunk.Text.Contains('\r')))
         {
             if (context.PreviousBlock is ParagraphBlock { Status: BlockStatus.Open } openPara)
             {
@@ -51,15 +51,15 @@ class ParagraphParser : IBlockParser
             _needsLineBreak = false;
         }
 
-        var terminatorIdx = chunk.IndexOfAny(new[] { '\n', '\r' });
+        var terminatorIdx = chunk.Text.IndexOfAny(new[] { '\n', '\r' });
         if (terminatorIdx >= 0)
         {
-            para.Inlines.Append(chunk[..terminatorIdx].ToString());
+            para.Inlines.Append(chunk.Text[..terminatorIdx].ToString());
             _needsLineBreak = true;
             return AppendResult.NeedMatch;
         }
 
-        para.Inlines.Append(chunk.ToString());
+        para.Inlines.Append(chunk.Text.ToString());
         return AppendResult.KeepFeeding;
     }
 
