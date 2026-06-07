@@ -8,7 +8,13 @@ class StreamParser : IBlockParser
 {
     private readonly List<IBlockParser> _blockParsers = null!;
     private readonly ParagraphParser paragraphParser = null!;
+    /// <summary>
+    /// 缓存最后未处理的块
+    /// </summary>
     private readonly StringBuilder _pendingBuffer = new();
+    /// <summary>
+    /// 缓存最后未解析完成的行
+    /// </summary>
     private readonly LineBuffer _currentLine = new();
     private ParserContext context;
     private IBlockParser? currentParser;
@@ -64,19 +70,16 @@ class StreamParser : IBlockParser
             var index = chunk.IndexOfAny(new[] { '\n', '\r' });
             var segment = index == -1 ? chunk : chunk[..(index + 1)];
 
-
-            bool isLineStart = _currentLine.Length == 0;
-            bool isLineEnd = segment.EndsWith("\n") || segment.EndsWith("\r");
-
             _currentLine.Append(segment);
+            _pendingBuffer.Append(segment);
 
             // 构造chuck
             // 先看当前是否有缓冲的内容，如果有的话就把缓冲的内容和当前的segment一起构造成一个新的字符串，否则就直接用当前的segment
-            if (_pendingBuffer.Length > 0)
-            {
-                _pendingBuffer.Append(segment);
+            if (_pendingBuffer.Length > segment.Length)
                 segment = _pendingBuffer.ToString().AsSpan();
-            }
+
+            bool isLineStart = _currentLine.Length == segment.Length; // _currentLine 从行首累积，如果跟当前块长度一样，那自然是从行首开始的
+            bool isLineEnd = segment.EndsWith("\n") || segment.EndsWith("\r");
 
             var chuck = new TextChunk(segment, isLineStart, isLineEnd);
             var result = this.Append(chuck, context);
@@ -86,7 +89,7 @@ class StreamParser : IBlockParser
                 // 当前解析器要求重新匹配当前行，那我们就重新匹配一次。
                 // 注意解析器可能吃掉了一些内容，所以我们需要将当前整行的内容都重新匹配，而不是只匹配当前这一小块
                 currentParser = null;
-                var line = new TextChunk(_currentLine.Slice(0,_currentLine.Length), true, chuck.IsLineEnd);
+                var line = new TextChunk(_currentLine.Slice(0, _currentLine.Length), true, chuck.IsLineEnd);
                 result = this.Append(line, context);
             }
 
