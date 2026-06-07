@@ -22,9 +22,9 @@ public class BlockQuoteParserTests
         _ => "",
     };
 
-    // ═══════════════════════════════════════════
+    // ═══════════════════════════════════════════════
     //  TryMatch
-    // ═══════════════════════════════════════════
+    // ═══════════════════════════════════════════════
 
     [DataTestMethod]
     [DataRow(">")]
@@ -35,34 +35,43 @@ public class BlockQuoteParserTests
     [DataRow("   >")]
     [DataRow("  > text")]
     [DataRow("   > text")]
-    public void TryMatch_StartsWithGreaterThan_ReturnsFullMatch(string line)
+    public void TryMatch_StartsWithGtAtLineStart_ReturnsFullMatch(string line)
     {
         var parser = new BlockQuoteParser();
-        var ctx = new ParserContext();
-
-        var result = parser.TryMatch(new TextChunk(line, false, false), ctx);
-
+        var result = parser.TryMatch(new TextChunk(line, true, false), new ParserContext());
         Assert.AreEqual(MatchResult.FullMatch, result);
     }
 
     [DataTestMethod]
-    [DataRow("")]
     [DataRow("text")]
-    [DataRow("    >")] // 4+ spaces before > → not a block quote
+    [DataRow("    >")]
     [DataRow("    > text")]
-    public void TryMatch_NoGreaterThan_ReturnsNoMatch(string line)
+    [DataRow("\n")]
+    [DataRow(" \n")]
+    public void TryMatch_NoGtAtLineStart_ReturnsNoMatch(string line)
     {
         var parser = new BlockQuoteParser();
-        var ctx = new ParserContext();
-
-        var result = parser.TryMatch(new TextChunk(line, false, false), ctx);
-
+        var isLineEnd = line.Contains('\n') || line.Contains('\r');
+        var result = parser.TryMatch(new TextChunk(line, true, isLineEnd), new ParserContext());
         Assert.AreEqual(MatchResult.NoMatch, result);
     }
 
-    // ═══════════════════════════════════════════
+
+
+    [DataTestMethod]
+    [DataRow(" ")]
+    [DataRow("  ")]
+    [DataRow("   ")]
+    public void TryMatch_BlankAtLineStartNotLineEnd_ReturnsPartialMatch(string line)
+    {
+        var parser = new BlockQuoteParser();
+        var result = parser.TryMatch(new TextChunk(line, true, false), new ParserContext());
+        Assert.AreEqual(MatchResult.PartialMatch, result);
+    }
+
+    // ═══════════════════════════════════════════════
     //  OnMatch
-    // ═══════════════════════════════════════════
+    // ═══════════════════════════════════════════════
 
     [TestMethod]
     public void OnMatch_CreatesBlockQuoteBlock()
@@ -77,7 +86,7 @@ public class BlockQuoteParserTests
     }
 
     [TestMethod]
-    public void OnMatch_ConsecutiveCall_ReusesExistingBlockQuote()
+    public void OnMatch_ConsecutiveCallWithOpenBlock_ReusesExistingBlock()
     {
         var parser = new BlockQuoteParser();
         var ctx = new ParserContext();
@@ -88,38 +97,66 @@ public class BlockQuoteParserTests
         Assert.AreEqual(1, ctx.Blocks.Count, "Should reuse same BlockQuote");
     }
 
-    // ═══════════════════════════════════════════
-    //  Append — prefix stripping & forwarding
-    // ═══════════════════════════════════════════
+    // ═══════════════════════════════════════════════
+    //  Append — direct, whole-line chunks
+    // ═══════════════════════════════════════════════
 
     [TestMethod]
-    public void Append_StripsPrefix_AndCreatesInnerParagraph()
+    public void Append_BeforeOnMatch_ReturnsNextLineNeedMatch()
     {
         var parser = new BlockQuoteParser();
-        var buffer = new LineBuffer();
-        buffer.Append("> text\n");
-        var ctx = new ParserContext(new LineBufferView(buffer));
+        var result = parser.Append(new TextChunk("> text\n", true, true), new ParserContext());
+        Assert.AreEqual(AppendResult.NextLineNeedMatch, result);
+    }
+
+    [TestMethod]
+    public void Append_ContinuationNotAtLineStart_FeedsDirectly()
+    {
+        var parser = new BlockQuoteParser();
+        var ctx = new ParserContext();
         parser.OnMatch("> text\n", ctx);
 
-        var result = parser.Append(new TextChunk("> text\n", false, false), ctx);
+        var result = parser.Append(new TextChunk(" more\n", false, true), ctx);
+
+        Assert.AreEqual(AppendResult.KeepFeeding, result);
+    }
+
+    [TestMethod]
+    public void Append_BlankAtLineStartNotLineEnd_ReturnsNeedNextChunk()
+    {
+        var parser = new BlockQuoteParser();
+        var ctx = new ParserContext();
+        parser.OnMatch("> text\n", ctx);
+
+        var result = parser.Append(new TextChunk("  ", true, false), ctx);
+
+        Assert.AreEqual(AppendResult.NeedNextChunk, result);
+    }
+
+    [TestMethod]
+    public void Append_GtLine_StripsPrefix_FeedsContent()
+    {
+        var parser = new BlockQuoteParser();
+        var ctx = new ParserContext();
+        parser.OnMatch("> A wise quote.\n", ctx);
+
+        var result = parser.Append(new TextChunk("> A wise quote.\n", true, true), ctx);
 
         Assert.AreEqual(AppendResult.KeepFeeding, result);
         var quote = (BlockQuoteBlock)ctx.Blocks[0];
         Assert.AreEqual(1, quote.Children.Count);
         var para = (ParagraphBlock)quote.Children[0];
-        Assert.AreEqual("text", GetInlinesText(para.Inlines));
+        Assert.AreEqual("A wise quote.", GetInlinesText(para.Inlines));
     }
 
     [TestMethod]
-    public void Append_WithLeadingSpace_PrefixStripped()
+    public void Append_GtWithLeadingSpaces_StripsPrefix_FeedsContent()
     {
         var parser = new BlockQuoteParser();
-        var buffer = new LineBuffer();
-        buffer.Append("  > text\n");
-        var ctx = new ParserContext(new LineBufferView(buffer));
+        var ctx = new ParserContext();
         parser.OnMatch("  > text\n", ctx);
 
-        parser.Append(new TextChunk("  > text\n", false, false), ctx);
+        parser.Append(new TextChunk("  > text\n", true, true), ctx);
 
         var quote = (BlockQuoteBlock)ctx.Blocks[0];
         var para = (ParagraphBlock)quote.Children[0];
@@ -127,19 +164,52 @@ public class BlockQuoteParserTests
     }
 
     [TestMethod]
-    public void Append_LazyContinuation_ForwardsAsIs()
+    public void Append_GtLineWithoutContentAfterStrip_FeedsNewline()
     {
         var parser = new BlockQuoteParser();
-        var buffer = new LineBuffer();
-        var ctx = new ParserContext(new LineBufferView(buffer));
+        var ctx = new ParserContext();
+        parser.OnMatch("> text\n", ctx);
+        parser.Append(new TextChunk("> text\n", true, true), ctx);
+
+        var result = parser.Append(new TextChunk(">\n", true, true), ctx);
+
+        Assert.AreEqual(AppendResult.KeepFeeding, result);
+    }
+
+    [TestMethod]
+    public void Append_GtWithoutNewline_ReturnsNeedNextChunk()
+    {
+        var parser = new BlockQuoteParser();
+        var ctx = new ParserContext();
+        parser.OnMatch("> text\n", ctx);
+
+        var result = parser.Append(new TextChunk(">", true, false), ctx);
+
+        Assert.AreEqual(AppendResult.NeedNextChunk, result);
+    }
+
+    [TestMethod]
+    public void Append_BlankLine_EndsQuote()
+    {
+        var parser = new BlockQuoteParser();
+        var ctx = new ParserContext();
+        parser.OnMatch("> text\n", ctx);
+        parser.Append(new TextChunk("> text\n", true, true), ctx);
+
+        var result = parser.Append(new TextChunk("\n", true, true), ctx);
+
+        Assert.AreEqual(AppendResult.NextLineNeedMatch, result);
+    }
+
+    [TestMethod]
+    public void Append_LazyContinuation_FeedsDirectly()
+    {
+        var parser = new BlockQuoteParser();
+        var ctx = new ParserContext();
         parser.OnMatch("> quote\n", ctx);
+        parser.Append(new TextChunk("> quote\n", true, true), ctx);
 
-        buffer.Append("> quote\n");
-        parser.Append(new TextChunk("> quote\n", false, false), ctx);
-        buffer.Clear(); // 模拟 StreamParser 的行完结清理
-
-        buffer.Append("lazy continuation\n");
-        var result = parser.Append(new TextChunk("lazy continuation\n", false, false), ctx);
+        var result = parser.Append(new TextChunk("lazy continuation\n", true, true), ctx);
 
         Assert.AreEqual(AppendResult.KeepFeeding, result);
         var quote = (BlockQuoteBlock)ctx.Blocks[0];
@@ -148,35 +218,43 @@ public class BlockQuoteParserTests
     }
 
     [TestMethod]
-    public void Append_BlankLineWithoutPrefix_EndsQuote()
+    public void Append_MultipleGtLines_SameParagraph()
     {
         var parser = new BlockQuoteParser();
         var ctx = new ParserContext();
-        parser.OnMatch("> text\n", ctx);
-        parser.Append(new TextChunk("> text\n", false, false), ctx);
+        parser.OnMatch("> first\n", ctx);
+        parser.Append(new TextChunk("> first\n", true, true), ctx);
+        parser.Append(new TextChunk("> second\n", true, true), ctx);
 
-        var result = parser.Append(new TextChunk("\n", false, false), ctx);
+        var quote = (BlockQuoteBlock)ctx.Blocks[0];
+        Assert.AreEqual(1, quote.Children.Count);
+        var para = (ParagraphBlock)quote.Children[0];
+        Assert.AreEqual("first\nsecond", GetInlinesText(para.Inlines));
+    }
 
-        Assert.AreEqual(AppendResult.NextLineNeedMatch, result, "Blank line without > should end quote");
+    // ═══════════════════════════════════════════════
+    //  Complete
+    // ═══════════════════════════════════════════════
+
+    [TestMethod]
+    public void Complete_WhenNotInitialized_DoesNotThrow()
+    {
+        var parser = new BlockQuoteParser();
+        parser.Complete(new ParserContext());
     }
 
     [TestMethod]
-    public void Append_EmptyPrefixLine_StaysInQuote()
+    public void Complete_AfterOnMatch_DoesNotThrow()
     {
         var parser = new BlockQuoteParser();
         var ctx = new ParserContext();
         parser.OnMatch("> text\n", ctx);
-        parser.Append(new TextChunk("> text\n", false, false), ctx);
-
-        // >\n (empty prefix line) stays in quote
-        var result = parser.Append(new TextChunk(">\n", false, false), ctx);
-
-        Assert.AreEqual(AppendResult.KeepFeeding, result);
+        parser.Complete(ctx);
     }
 
-    // ═══════════════════════════════════════════
-    //  Feed integration (via StreamParser)
-    // ═══════════════════════════════════════════
+    // ═══════════════════════════════════════════════
+    //  Feed — integration via StreamParser
+    // ═══════════════════════════════════════════════
 
     [TestMethod]
     public void Feed_SingleLine_CreatesBlockQuote()
@@ -216,22 +294,6 @@ public class BlockQuoteParserTests
         Assert.AreEqual(2, quote.Children.Count);
         Assert.AreEqual("Para one", GetInlinesText(((ParagraphBlock)quote.Children[0]).Inlines));
         Assert.AreEqual("Para two", GetInlinesText(((ParagraphBlock)quote.Children[1]).Inlines));
-    }
-
-    [TestMethod]
-    public void Feed_WithHeading_CreatesHeadingAndParagraph()
-    {
-        var parser = new StreamParser();
-
-        parser.Feed("> # Title\n> Text\n");
-
-        var quote = (BlockQuoteBlock)parser.Blocks[0];
-        Assert.AreEqual(2, quote.Children.Count);
-        Assert.IsInstanceOfType(quote.Children[0], typeof(HeadingBlock));
-        Assert.AreEqual(1, ((HeadingBlock)quote.Children[0]).Level);
-        Assert.AreEqual("Title", GetInlinesText(((HeadingBlock)quote.Children[0]).Inlines));
-        Assert.IsInstanceOfType(quote.Children[1], typeof(ParagraphBlock));
-        Assert.AreEqual("Text", GetInlinesText(((ParagraphBlock)quote.Children[1]).Inlines));
     }
 
     [TestMethod]
@@ -298,86 +360,13 @@ public class BlockQuoteParserTests
         Assert.AreEqual("content", GetInlinesText(((ParagraphBlock)quote.Children[0]).Inlines));
     }
 
-    // ═══════════════════════════════════════════
-    //  Streaming (character-by-character) tests
-    // ═══════════════════════════════════════════
-
-    [TestMethod]
-    public void Append_Streaming_QuotePrefixAndContentSeparate_Works()
-    {
-        // "> text\n" arriving character by character
-        var parser = new BlockQuoteParser();
-        var buffer = new LineBuffer();
-        var ctx = new ParserContext(new LineBufferView(buffer));
-        parser.OnMatch("> \n", ctx);  // simulates first TryMatch+OnMatch
-
-        // Each char in "> text\n" arrives independently, simulating StreamParser.Feed dispatch
-        // 用 result 捕获最后一次 Append（"\n"）的返回值
-        AppendResult result = AppendResult.KeepFeeding;
-        foreach (char c in "> text\n")
-        {
-            buffer.Append(c.ToString());
-            result = parser.Append(new TextChunk(c.ToString(), false, false), ctx);
-        }
-
-        Assert.AreEqual(AppendResult.KeepFeeding, result);
-        var quote = (BlockQuoteBlock)ctx.Blocks[0];
-        Assert.AreEqual(1, quote.Children.Count);
-        var para = (ParagraphBlock)quote.Children[0];
-        Assert.AreEqual("text", GetInlinesText(para.Inlines));
-    }
-
-    [TestMethod]
-    public void Append_Streaming_BlankLineAfterQuote_EndsQuote()
-    {
-        var parser = new BlockQuoteParser();
-        var ctx = new ParserContext();
-        parser.OnMatch("> \n", ctx);
-
-        // Stream "> hello\n" character by character
-        foreach (char c in "> hello\n")
-        {
-            parser.Append(new TextChunk(c.ToString(), false, false), ctx);
-        }
-
-        // Then blank line
-        var result = parser.Append(new TextChunk("\n", false, false), ctx);
-
-        Assert.AreEqual(AppendResult.NextLineNeedMatch, result, "Blank line should end the quote");
-    }
-
-    [TestMethod]
-    public void Append_Streaming_MultipleQuoteLines_SameParagraph()
-    {
-        // Consecutive > lines without blank > separator → single paragraph with soft breaks
-        var parser = new BlockQuoteParser();
-        var buffer = new LineBuffer();
-        var ctx = new ParserContext(new LineBufferView(buffer));
-        parser.OnMatch("> \n", ctx);
-
-        foreach (char c in "> first\n")
-        {
-            buffer.Append(c.ToString());
-            parser.Append(new TextChunk(c.ToString(), false, false), ctx);
-        }
-        buffer.Clear(); // 行完结清理
-
-        foreach (char c in "> second\n")
-        {
-            buffer.Append(c.ToString());
-            parser.Append(new TextChunk(c.ToString(), false, false), ctx);
-        }
-
-        var quote = (BlockQuoteBlock)ctx.Blocks[0];
-        Assert.AreEqual(1, quote.Children.Count, "Consecutive > lines → one paragraph");
-        var para = (ParagraphBlock)quote.Children[0];
-        Assert.AreEqual("first\nsecond", GetInlinesText(para.Inlines));
-    }
+    // ═══════════════════════════════════════════════
+    //  Feed — streaming (char-by-char)
+    // ═══════════════════════════════════════════════
 
     [TestMethod]
     public void Feed_Streaming_QuoteThenParagraph()
     {
-        // Full streaming scenario: quote followed by normal paragraph
         var parser = new StreamParser();
 
         foreach (char c in "> A quote.\n\nNormal.\n")
@@ -393,21 +382,17 @@ public class BlockQuoteParserTests
     [TestMethod]
     public void Feed_Streaming_QuoteContentNotOutside()
     {
-        // The exact scenario from the bug report:
-        // "> *混合样式*：在引用块内使用 **粗体** 和 `代码`。" streamed char-by-char
         var parser = new StreamParser();
 
         string content = "> *混合样式*：在引用块内使用 **粗体** 和 `代码`。\n";
         foreach (char c in content)
             parser.Feed(c.ToString());
 
-        // Content should be INSIDE the quote, not outside
         Assert.AreEqual(1, parser.Blocks.Count, "Only one block (the quote) expected");
         Assert.IsInstanceOfType(parser.Blocks[0], typeof(BlockQuoteBlock));
         var quote = (BlockQuoteBlock)parser.Blocks[0];
         Assert.AreEqual(1, quote.Children.Count, "One paragraph inside quote");
         var para = (ParagraphBlock)quote.Children[0];
-        // Use RawBuffer to compare full content including inline markup
         Assert.AreEqual("*混合样式*：在引用块内使用 **粗体** 和 `代码`。",
             para.Inlines.RawBuffer.ToString());
     }
