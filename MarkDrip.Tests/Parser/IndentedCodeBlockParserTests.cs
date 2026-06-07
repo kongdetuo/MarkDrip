@@ -92,7 +92,7 @@ public class IndentedCodeBlockParserTests
 
         parser.OnMatch("    hello\n", ctx);
         parser.Append(new TextChunk("    hello\n", true, true), ctx);
-
+        parser.Complete(ctx);
         var code = (CodeBlock)ctx.Blocks[0];
         Assert.AreEqual("hello", code.Content.ToString());
     }
@@ -107,6 +107,7 @@ public class IndentedCodeBlockParserTests
         var parser = new StreamParser();
 
         parser.Feed("    hello\n");
+        parser.Complete();
 
         Assert.AreEqual(1, parser.Blocks.Count);
         var code = (CodeBlock)parser.Blocks[0];
@@ -119,7 +120,7 @@ public class IndentedCodeBlockParserTests
         var parser = new StreamParser();
 
         parser.Feed("    line1\n    line2\n    line3\n");
-
+        parser.Complete();
         var code = (CodeBlock)parser.Blocks[0];
         Assert.AreEqual("line1\nline2\nline3", code.Content.ToString());
     }
@@ -131,7 +132,7 @@ public class IndentedCodeBlockParserTests
         var parser = new StreamParser();
 
         parser.Feed("        extra indent\n");
-
+        parser.Complete();
         var code = (CodeBlock)parser.Blocks[0];
         Assert.AreEqual("    extra indent", code.Content.ToString());
     }
@@ -142,6 +143,7 @@ public class IndentedCodeBlockParserTests
         var parser = new StreamParser();
 
         parser.Feed("    line1\n\n    line2\n");
+        parser.Complete();
 
         var code = (CodeBlock)parser.Blocks[0];
         // blank line between chunks is part of content
@@ -154,7 +156,7 @@ public class IndentedCodeBlockParserTests
         var parser = new StreamParser();
 
         parser.Feed("    a\n\n\n    b\n");
-
+        parser.Complete();
         var code = (CodeBlock)parser.Blocks[0];
         Assert.AreEqual("a\n\n\nb", code.Content.ToString());
     }
@@ -208,6 +210,7 @@ public class IndentedCodeBlockParserTests
         var parser = new StreamParser();
 
         parser.Feed("    - list?\n");
+        parser.Complete();
 
         Assert.AreEqual(1, parser.Blocks.Count);
         Assert.IsInstanceOfType(parser.Blocks[0], typeof(CodeBlock));
@@ -249,6 +252,7 @@ public class IndentedCodeBlockParserTests
         var parser = new StreamParser();
 
         parser.Feed("    ```\n    code inside\n    ```\n");
+        parser.Complete();
 
         Assert.AreEqual(1, parser.Blocks.Count);
         var code = (CodeBlock)parser.Blocks[0];
@@ -262,6 +266,7 @@ public class IndentedCodeBlockParserTests
         var parser = new StreamParser();
 
         parser.Feed("    text\n    ---\n    more\n");
+        parser.Complete();
 
         var code = (CodeBlock)parser.Blocks[0];
         Assert.AreEqual("text\n---\nmore", code.Content.ToString());
@@ -288,6 +293,7 @@ public class IndentedCodeBlockParserTests
         var parser = new StreamParser();
 
         parser.Feed("    chunk1\n\n\n    chunk2\n    chunk3\n");
+        parser.Complete();
 
         var code = (CodeBlock)parser.Blocks[0];
         Assert.AreEqual("chunk1\n\n\nchunk2\nchunk3", code.Content.ToString());
@@ -328,6 +334,7 @@ public class IndentedCodeBlockParserTests
         var parser = new StreamParser();
 
         parser.Feed("    > quote\n");
+        parser.Complete();
 
         Assert.AreEqual(1, parser.Blocks.Count);
         var code = (CodeBlock)parser.Blocks[0];
@@ -341,6 +348,7 @@ public class IndentedCodeBlockParserTests
         var parser = new StreamParser();
 
         parser.Feed("    code\n\n    more\n\n\n    last\n");
+        parser.Complete();
 
         var code = (CodeBlock)parser.Blocks[0];
         // First blank: between "code" and "more" → preserved
