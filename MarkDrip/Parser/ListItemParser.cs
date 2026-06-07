@@ -163,7 +163,7 @@ class ListItemParser
             return AppendResult.KeepFeeding;
         }
 
-        return AppendResult.YieldLine;
+        return AppendResult.ReMatch;
     }
 
     public void FeedContinuationLine(ReadOnlySpan<char> fullLine)

@@ -6,8 +6,9 @@ namespace MarkDrip.Parser;
 
 class CodeBlockParser : IBlockParser
 {
-    public MatchResult TryMatch(ReadOnlySpan<char> line, ParserContext context)
+    public MatchResult TryMatch(TextChunk chunk, ParserContext context)
     {
+        var line = chunk.Text;
         int pos = TextUtils.LeadingSpaces(line);
         if (pos >= line.Length) return MatchResult.NoMatch;
         char c = line[pos];
@@ -24,10 +25,10 @@ class CodeBlockParser : IBlockParser
         context.Blocks.Add(new CodeBlock { InfoStringPending = true });
     }
 
-    public AppendResult Append(TextChuck chunk, ParserContext context)
+    public AppendResult Append(TextChunk chunk, ParserContext context)
     {
         if (context.PreviousBlock is not CodeBlock code)
-            return AppendResult.NeedMatch;
+            return AppendResult.NextLineNeedMatch;
 
         // ── 首次 Append：解析开围栏，不论是否完结都不转发此行 ──
         if (code.InfoStringPending)
@@ -52,7 +53,7 @@ class CodeBlockParser : IBlockParser
                 code.Content.Remove(code.Content.Length - lb.Length, lb.Length);
                 StripTrailingNewline(code);
                 code.Status = BlockStatus.Finalized;
-                return AppendResult.NeedMatch;
+                return AppendResult.NextLineNeedMatch;
             }
         }
 

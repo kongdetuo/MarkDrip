@@ -6,19 +6,18 @@ namespace MarkDrip.Parser;
 
 class ThematicBreakParser : IBlockParser
 {
-    public MatchResult TryMatch(ReadOnlySpan<char> line, ParserContext context)
+    public MatchResult TryMatch(TextChunk chunk, ParserContext context)
     {
+        var line = chunk.Text;
         int pos = TextUtils.LeadingSpaces(line);
         if (pos >= line.Length) return MatchResult.NoMatch;
 
         char marker = line[pos];
         if (marker is not '-' and not '*' and not '_') return MatchResult.NoMatch;
 
-        // Setext 标题只使用 '-'（和 '='），当上一段未结束时 '-' 标记优先给 SetextHeaderParser 处理
         if (marker is '-' && context.PreviousBlock is ParagraphBlock { Status: BlockStatus.Open })
             return MatchResult.NoMatch;
 
-        // 扫描标记和中间空格/制表符
         int count = 0;
         while (pos < line.Length)
         {
@@ -27,7 +26,6 @@ class ThematicBreakParser : IBlockParser
             else break;
         }
 
-        // 尾部只能有空白/换行
         bool hasNewline = false;
         while (pos < line.Length)
         {
@@ -37,11 +35,9 @@ class ThematicBreakParser : IBlockParser
             else return MatchResult.NoMatch;
         }
 
-        // 条件 2+3：完整行（含换行符）+ 至少 3 个相同标记
         if (count >= 3 && hasNewline)
             return MatchResult.FullMatch;
 
-        // 有标记但行不完整（无换行符），等待后续字符累积后再尝试
         if (count > 0 && !hasNewline)
             return MatchResult.PartialMatch;
 
@@ -53,8 +49,8 @@ class ThematicBreakParser : IBlockParser
         context.Blocks.Add(new ThematicBreakBlock());
     }
 
-    public AppendResult Append(TextChuck chunk, ParserContext context)
+    public AppendResult Append(TextChunk chunk, ParserContext context)
     {
-        return AppendResult.NeedMatch;
+        return AppendResult.NextLineNeedMatch;
     }
 }

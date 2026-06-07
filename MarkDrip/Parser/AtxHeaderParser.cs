@@ -6,8 +6,6 @@ namespace MarkDrip.Parser;
 
 class AtxHeaderParser : IBlockParser
 {
-    private bool _initialContentProcessed;
-
     /// <summary>TryMatch 命中后解析级别并创建 HeadingBlock，内容由后续 Append 写入。</summary>
     public void OnMatch(ReadOnlySpan<char> line, ParserContext context)
     {
@@ -18,33 +16,42 @@ class AtxHeaderParser : IBlockParser
 
         var heading = new HeadingBlock(level);
         context.Blocks.Add(heading);
-        _initialContentProcessed = false;
     }
 
-    public AppendResult Append(TextChuck chunk, ParserContext context)
+    public AppendResult Append(TextChunk chunk, ParserContext context)
     {
         if (context.PreviousBlock is not HeadingBlock heading)
-            return AppendResult.NeedMatch;
+            return AppendResult.NextLineNeedMatch;
 
-        var hasNewline = chunk.Text.Contains('\n') || chunk.Text.Contains('\r');
-
-        if (!_initialContentProcessed)
+        if (chunk.IsLineStart)
         {
-            _initialContentProcessed = true;
-            // 首次调用：提取标题文本（去除 # 标记和尾部空格 / #）
             var text = ExtractHeadingText(chunk.Text);
             if (text.Length > 0)
                 heading.Inlines.Append(text);
-        }
-        else
-        {
-            // 续接内容（极少发生，仅当标题文本被拆到多个 chunk 时）
-            var content = TextUtils.StripTrailingNewline(chunk.Text);
-            if (content.Length > 0)
-                heading.Inlines.Append(content.ToString());
+
+            if (chunk.IsLineEnd)
+            {
+                heading.Status = BlockStatus.Finalized;
+                return AppendResult.NextLineNeedMatch;
+            }
+
+            return AppendResult.KeepFeeding;
         }
 
-        return hasNewline ? AppendResult.NeedMatch : AppendResult.KeepFeeding;
+        if (chunk.IsLineEnd)
+        {
+            var content = TextUtils.StripTrailingNewline(chunk.Text);
+            if (content.Length > 0)
+                heading.Inlines.Append(content);
+            heading.Status = BlockStatus.Finalized;
+            return AppendResult.NextLineNeedMatch;
+        }
+
+        if (chunk.Text.EndsWith("#"))
+            return AppendResult.NeedNextChunk;
+
+        heading.Inlines.Append(chunk.Text);
+        return AppendResult.KeepFeeding;
     }
 
     private static string ExtractHeadingText(ReadOnlySpan<char> line)
@@ -71,8 +78,9 @@ class AtxHeaderParser : IBlockParser
         return content.ToString();
     }
 
-    public MatchResult TryMatch(ReadOnlySpan<char> line, ParserContext context)
+    public MatchResult TryMatch(TextChunk chunk, ParserContext context)
     {
+        var line = chunk.Text;
         int hashCount = 0;
         while (hashCount < line.Length && hashCount < 6 && line[hashCount] == '#')
             hashCount++;
@@ -80,11 +88,9 @@ class AtxHeaderParser : IBlockParser
         if (hashCount == 0)
             return MatchResult.NoMatch;
 
-        // 只有 # 没有内容 → 需要更多输入才能判断
         if (hashCount == line.Length)
             return MatchResult.PartialMatch;
 
-        // # 后必须是空白字符才构成合法 ATX 标题
         if (hashCount <= 6 && char.IsWhiteSpace(line[hashCount]))
             return MatchResult.FullMatch;
 

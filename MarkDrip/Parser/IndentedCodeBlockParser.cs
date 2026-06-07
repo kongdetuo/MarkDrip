@@ -4,117 +4,84 @@ using System.Text;
 
 namespace MarkDrip.Parser;
 
+/// <summary>缩进代码块解析器。</summary>
 class IndentedCodeBlockParser : IBlockParser
 {
-    private int _blankLineCount;
-    private bool _initialContentProcessed;
-
-    public MatchResult TryMatch(ReadOnlySpan<char> line, ParserContext context)
+    public MatchResult TryMatch(TextChunk chunk, ParserContext context)
     {
-        // 不能打断段落（paragraph.interrupting）
+        // 不能打断段落（CommonMark 4.4）
         if (context.PreviousBlock is ParagraphBlock { Status: BlockStatus.Open })
             return MatchResult.NoMatch;
 
-        int spaces = TextUtils.CountLeadingSpaces(line);
-        if (spaces < 4) return MatchResult.NoMatch;
+        // 4 个或更少的纯空白字符（非行尾）——可能累积成缩进代码块，期待更多输入
+        if (chunk.Length <= 4 && !chunk.IsLineEnd && chunk.IsBlank)
+            return MatchResult.PartialMatch;
 
-        // 4 空格后必须有非空白内容（纯空白行不能启动缩进代码块）
-        ReadOnlySpan<char> afterIndent = line[4..];
-        if (afterIndent.IsEmpty) return MatchResult.NoMatch;
-        var trimmed = TextUtils.StripTrailingNewline(afterIndent);
-        if (trimmed.IsEmpty) return MatchResult.NoMatch;
-        for (int i = 0; i < trimmed.Length; i++)
-            if (!char.IsWhiteSpace(trimmed[i]))
-                return MatchResult.FullMatch;
+        // 前 4 字符是空白、后续有非空白内容 → 匹配
+        if (chunk.Length > 4 && chunk.Text[0..4].IsWhiteSpace() && chunk.Text[4..].IsNotWhiteSpace())
+            return MatchResult.FullMatch;
 
         return MatchResult.NoMatch;
     }
 
     public void OnMatch(ReadOnlySpan<char> line, ParserContext context)
     {
+        // 只创建块，内容由 Append 逐行追加
         var code = new CodeBlock();
         context.Blocks.Add(code);
-        _blankLineCount = 0;
-        _initialContentProcessed = false;
-
-        // 剥去前 4 空格，将首行内容写入代码块
-        AppendLineContent(code, line);
     }
 
-    public AppendResult Append(TextChuck chunk, ParserContext context)
+    public AppendResult Append(TextChunk chunk, ParserContext context)
     {
         if (context.PreviousBlock is not CodeBlock code)
-            return AppendResult.NeedMatch;
+            return AppendResult.NextLineNeedMatch;
 
-        // OnMatch 已处理首行，跳过重复处理
-        if (!_initialContentProcessed)
+        var text = chunk.Text;
+        if (chunk.IsLineStart)
         {
-            _initialContentProcessed = true;
-            return AppendResult.KeepFeeding;
-        }
+            // ── 新行判定 ──
+            int checkLen = Math.Min(4, chunk.Length);
 
-        // ── Blank line → buffer ──
-        if (TextUtils.IsBlankLine(chunk.Text))
-        {
-            _blankLineCount++;
-            return AppendResult.KeepFeeding;
-        }
-
-        // ── 有悬而未决的空白行 ──
-        if (_blankLineCount > 0)
-        {
-            if (TextUtils.CountLeadingSpaces(chunk.Text) >= 4)
+            // 行首 4 字符非空白 → 代码块到此结束，将当前行归还给 StreamParser 重新匹配
+            if (chunk.Text[..checkLen].IsNotWhiteSpace())
             {
-                // 续行：空白属于块内 chunk 分隔，flush 到内容中
-                FlushBlankLines(code);
-                AppendLineContent(code, chunk.Text);
-                _blankLineCount = 0;
-                return AppendResult.KeepFeeding;
+                StripTrailingBlankLines(code);
+                code.Status = BlockStatus.Finalized;
+                return AppendResult.ReMatch;
             }
 
-            // 非缩进行 → 代码块结束，空白不纳入内容
-            _blankLineCount = 0;
+            // ── 缩进的内容行 ──
+            if (chunk.Length > 4)
+                text = chunk.Text[4..];
+            else
+                text = "\n";
+        }
+
+        // 追加，然后等待下一个块。
+        code.AppendContent(text);
+        return AppendResult.KeepFeeding;
+    }
+
+    public void Complete(ParserContext context)
+    {
+        if (context.PreviousBlock is CodeBlock { Status: BlockStatus.Open } code)
+        {
+            StripTrailingBlankLines(code);
             code.Status = BlockStatus.Finalized;
-            return AppendResult.YieldLine;
-        }
-
-        // ── 缩进的内容行 ──
-        if (TextUtils.CountLeadingSpaces(chunk.Text) >= 4)
-        {
-            AppendLineContent(code, chunk.Text);
-            return AppendResult.KeepFeeding;
-        }
-
-        // ── 非缩进行 → 代码块结束 ──
-        code.Status = BlockStatus.Finalized;
-        return AppendResult.YieldLine;
-    }
-
-    private void FlushBlankLines(CodeBlock code)
-    {
-        for (int i = 0; i < _blankLineCount; i++)
-        {
-            code.Content.Append('\n');
-            code.NotifyContentChanged();
         }
     }
 
-    /// <summary>剥去前 4 空格和尾部换行，将剩余内容追加到代码块。</summary>
-    private static void AppendLineContent(CodeBlock code, ReadOnlySpan<char> chunk)
+    /// <summary>移除代码块内容末尾的所有空行（\n 和 \r）。</summary>
+    private static void StripTrailingBlankLines(CodeBlock code)
     {
-        var content = TextUtils.StripTrailingNewline(chunk);
-        if (content.Length > 4)
+        while (code.Content.Length > 0)
         {
-            if (code.Content.Length > 0)
-                code.Content.Append('\n');
-            code.Content.Append(content[4..]);
-            code.NotifyContentChanged();
+            var last = code.Content[^1];
+            if (char.IsWhiteSpace(last))
+                code.Content.Remove(code.Content.Length - 1, 1);
+            else
+                break;
         }
-        else
-        {
-            if (code.Content.Length > 0)
-                code.Content.Append('\n');
-            code.NotifyContentChanged();
-        }
+        code.NotifyContentChanged();
     }
 }

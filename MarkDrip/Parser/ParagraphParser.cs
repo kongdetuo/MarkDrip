@@ -14,7 +14,7 @@ class ParagraphParser : IBlockParser
         // _needsLineBreak 需要保留到 Append 中判断。
     }
 
-    public AppendResult Append(TextChuck chunk, ParserContext context)
+    public AppendResult Append(TextChunk chunk, ParserContext context)
     {
         // 纯空白行（含换行符）
         if (chunk.Text.IsWhiteSpace() && (chunk.Text.Contains('\n') || chunk.Text.Contains('\r')))
@@ -25,16 +25,16 @@ class ParagraphParser : IBlockParser
                 {
                     // 已在行边界上 → 第二行空白是真正的空行 → 结束段落
                     openPara.Status = BlockStatus.Finalized;
-                    return AppendResult.NeedMatch;
+                    return AppendResult.NextLineNeedMatch;
                 }
                 // 行终止符（在段落内产生软换行）
                 _needsLineBreak = true;
-                return AppendResult.NeedMatch;
+                return AppendResult.NextLineNeedMatch;
             }
             if (context.PreviousBlock is ParagraphBlock prevPara)
                 prevPara.Status = BlockStatus.Finalized;
             _needsLineBreak = true;
-            return AppendResult.NeedMatch;
+            return AppendResult.NextLineNeedMatch;
         }
 
         var para = context.PreviousBlock as ParagraphBlock;
@@ -56,14 +56,14 @@ class ParagraphParser : IBlockParser
         {
             para.Inlines.Append(chunk.Text[..terminatorIdx].ToString());
             _needsLineBreak = true;
-            return AppendResult.NeedMatch;
+            return AppendResult.NextLineNeedMatch;
         }
 
         para.Inlines.Append(chunk.Text.ToString());
         return AppendResult.KeepFeeding;
     }
 
-    public MatchResult TryMatch(ReadOnlySpan<char> line, ParserContext context)
+    public MatchResult TryMatch(TextChunk chunk, ParserContext context)
     {
         return MatchResult.NoMatch;
     }

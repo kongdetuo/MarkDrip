@@ -9,11 +9,11 @@ class ListParser : IBlockParser
     private readonly ListItemParser _itemParser = new();
     private ListBlock? _lastList;
 
-    public MatchResult TryMatch(ReadOnlySpan<char> line, ParserContext context)
+    public MatchResult TryMatch(TextChunk chunk, ParserContext context)
     {
-        if (TryParseMarker(line) != null)
+        if (TryParseMarker(chunk.Text) != null)
             return MatchResult.FullMatch;
-        return CouldBeMarker(line) ? MatchResult.PartialMatch : MatchResult.NoMatch;
+        return CouldBeMarker(chunk.Text) ? MatchResult.PartialMatch : MatchResult.NoMatch;
     }
 
     private static bool CouldBeMarker(ReadOnlySpan<char> line)
@@ -67,7 +67,7 @@ class ListParser : IBlockParser
         _itemParser.Reset();
     }
 
-    public AppendResult Append(TextChuck chunk, ParserContext context)
+    public AppendResult Append(TextChunk chunk, ParserContext context)
     {
         var list = context.PreviousBlock as ListBlock;
 
@@ -83,7 +83,7 @@ class ListParser : IBlockParser
         if (IsSameMarker(chunk.Text))
         {
             int blc = _itemParser.BlankLineCount;
-            if (blc >= 2) { _itemParser.Reset(); _lastList = null; return AppendResult.YieldLine; }
+            if (blc >= 2) { _itemParser.Reset(); _lastList = null; return AppendResult.ReMatch; }
             if (blc == 1) list!.IsLoose = true;
             StartNewItem(list!);
             FeedContentAfterMarker(chunk.Text);

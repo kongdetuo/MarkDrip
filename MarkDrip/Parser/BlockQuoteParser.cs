@@ -24,9 +24,9 @@ class BlockQuoteParser : IBlockParser
         return false;
     }
 
-    public MatchResult TryMatch(ReadOnlySpan<char> line, ParserContext context)
+    public MatchResult TryMatch(TextChunk chunk, ParserContext context)
     {
-        return StartsWithGt(line, out _) ? MatchResult.FullMatch : MatchResult.NoMatch;
+        return StartsWithGt(chunk.Text, out _) ? MatchResult.FullMatch : MatchResult.NoMatch;
     }
 
     public void OnMatch(ReadOnlySpan<char> line, ParserContext context)
@@ -40,10 +40,10 @@ class BlockQuoteParser : IBlockParser
         _innerParser = new StreamParser(quote.Children);
     }
 
-    public AppendResult Append(TextChuck chunk, ParserContext context)
+    public AppendResult Append(TextChunk chunk, ParserContext context)
     {
         if (_innerParser == null)
-            return AppendResult.NeedMatch;
+            return AppendResult.NextLineNeedMatch;
 
         var lb = context.LastLineBuffer;
         // LastLineBuffer 已由 StreamParser.Feed 统一追加，此处直接读取
@@ -57,7 +57,7 @@ class BlockQuoteParser : IBlockParser
             if (chunk.Text.IsWhiteSpace() && (chunk.Text.Contains('\n') || chunk.Text.Contains('\r')))
             {
                 _innerParser.Feed(chunk.Text);
-                return AppendResult.NeedMatch;
+                return AppendResult.NextLineNeedMatch;
             }
             _innerParser.Feed(chunk.Text);
             return AppendResult.KeepFeeding;

@@ -22,11 +22,7 @@ public sealed class InlineCollection : INotifyCollectionChanged
     /// </summary>
     internal StringBuilder RawBuffer => _rawBuffer;
 
-    /// <summary>
-    /// 将原始文本追加到内联缓冲区中。
-    /// 将解析状态标记为脏。
-    /// </summary>
-    public void Append(string text)
+    public void Append(ReadOnlySpan<char> text)
     {
         _rawBuffer.Append(text);
         _dirty = true;

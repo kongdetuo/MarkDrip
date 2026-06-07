@@ -28,7 +28,7 @@ public class ListParserTests
     {
         var parser = new ListParser();
 
-        var result = parser.TryMatch(line, new ParserContext());
+        var result = parser.TryMatch(new TextChunk(line, false, false), new ParserContext());
 
         Assert.AreEqual(MatchResult.FullMatch, result);
     }
@@ -45,7 +45,7 @@ public class ListParserTests
     {
         var parser = new ListParser();
 
-        var result = parser.TryMatch(line, new ParserContext());
+        var result = parser.TryMatch(new TextChunk(line, false, false), new ParserContext());
 
         Assert.AreEqual(MatchResult.NoMatch, result);
     }

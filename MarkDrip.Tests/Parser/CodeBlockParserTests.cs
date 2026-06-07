@@ -25,7 +25,7 @@ public class CodeBlockParserTests
     {
         var parser = new CodeBlockParser();
 
-        var result = parser.TryMatch(line, new ParserContext());
+        var result = parser.TryMatch(new TextChunk(line, false, false), new ParserContext());
 
         Assert.AreEqual(MatchResult.FullMatch, result);
     }
@@ -41,7 +41,7 @@ public class CodeBlockParserTests
     {
         var parser = new CodeBlockParser();
 
-        var result = parser.TryMatch(line, new ParserContext());
+        var result = parser.TryMatch(new TextChunk(line, false, false), new ParserContext());
 
         Assert.AreEqual(MatchResult.NoMatch, result);
     }
@@ -71,7 +71,7 @@ public class CodeBlockParserTests
         var ctx = new ParserContext(new LineBufferView(buf));
 
         parser.OnMatch("```csharp\n", ctx);
-        parser.Append(new TextChuck("```csharp\n", false, false), ctx);
+        parser.Append(new TextChunk("```csharp\n", false, false), ctx);
 
         var code = (CodeBlock)ctx.Blocks[0];
         Assert.AreEqual("csharp", code.InfoString);
@@ -86,7 +86,7 @@ public class CodeBlockParserTests
         var ctx = new ParserContext(new LineBufferView(buf));
 
         parser.OnMatch("~~~ python\n", ctx);
-        parser.Append(new TextChuck("~~~ python\n", false, false), ctx);
+        parser.Append(new TextChunk("~~~ python\n", false, false), ctx);
 
         var code = (CodeBlock)ctx.Blocks[0];
         Assert.AreEqual("python", code.InfoString);
@@ -101,7 +101,7 @@ public class CodeBlockParserTests
         var ctx = new ParserContext(new LineBufferView(buf));
 
         parser.OnMatch("```a`b\n", ctx);
-        parser.Append(new TextChuck("```a`b\n", false, false), ctx);
+        parser.Append(new TextChunk("```a`b\n", false, false), ctx);
 
         var code = (CodeBlock)ctx.Blocks[0];
         Assert.IsNull(code.InfoString, "Backticks in info string should be rejected");

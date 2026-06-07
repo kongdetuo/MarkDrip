@@ -35,6 +35,11 @@ internal static class TextUtils
         return true;
     }
 
+    public static bool IsNotWhiteSpace(this ReadOnlySpan<char> s)
+    {
+        return !s.IsWhiteSpace();
+    }
+
     /// <summary>统计前导空格数，最多 max 个（CommonMark 通用缩进上限为 3）。</summary>
     public static int LeadingSpaces(ReadOnlySpan<char> s, int max = 3)
     {
@@ -52,3 +57,5 @@ internal static class TextUtils
         return count;
     }
 }
+
+

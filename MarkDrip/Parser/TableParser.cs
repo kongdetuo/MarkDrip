@@ -11,8 +11,9 @@ class TableParser : IBlockParser
     private TableRow? _pendingRow;
     private int _cellIndex = -1;
 
-    public MatchResult TryMatch(ReadOnlySpan<char> line, ParserContext context)
+    public MatchResult TryMatch(TextChunk chunk, ParserContext context)
     {
+        var line = chunk.Text;
         if (line.IndexOf('|') < 0)
             return MatchResult.NoMatch;
 
@@ -22,11 +23,9 @@ class TableParser : IBlockParser
         if (!para.Inlines.RawBuffer.ToString().Contains('|'))
             return MatchResult.NoMatch;
 
-        // Quick check: all non-whitespace, non-pipe chars so far must be valid delimiter chars (- or :)
         if (!CouldBeDelimiterLine(line))
             return MatchResult.NoMatch;
 
-        // Without \n, the line is still accumulating — wait for more input
         if (line.IndexOf('\n') < 0)
             return MatchResult.PartialMatch;
 
@@ -63,7 +62,7 @@ class TableParser : IBlockParser
         _cellIndex = -1;
     }
 
-    public AppendResult Append(TextChuck chunk, ParserContext context)
+    public AppendResult Append(TextChunk chunk, ParserContext context)
     {
         if (_skipFirstLine)
         {
@@ -93,10 +92,10 @@ class TableParser : IBlockParser
             }
 
             if (TextUtils.IsBlankLine(trimmed))
-                return AppendResult.YieldLine;
+                return AppendResult.ReMatch;
 
             if (trimmed.IndexOf('|') < 0)
-                return AppendResult.YieldLine;
+                return AppendResult.ReMatch;
 
             var row = ParseRow(trimmed);
             NormalizeRowCells(row, _table!.Alignments.Length);
@@ -117,8 +116,8 @@ class TableParser : IBlockParser
             // Not a table row — yield if we haven't started streaming,
             // otherwise the table was already growing
             if (_pendingRow == null)
-                return AppendResult.YieldLine;
-            return AppendResult.YieldLine;
+                return AppendResult.ReMatch;
+            return AppendResult.ReMatch;
         }
 
         // Start streaming a new row if not already started

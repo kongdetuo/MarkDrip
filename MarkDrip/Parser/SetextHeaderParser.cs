@@ -6,25 +6,22 @@ namespace MarkDrip.Parser;
 
 class SetextHeaderParser : IBlockParser
 {
-    public AppendResult Append(TextChuck chunk, ParserContext context)
+    public AppendResult Append(TextChunk chunk, ParserContext context)
     {
-        return AppendResult.NeedMatch;
+        return AppendResult.NextLineNeedMatch;
     }
 
-    public MatchResult TryMatch(ReadOnlySpan<char> line, ParserContext context)
+    public MatchResult TryMatch(TextChunk chunk, ParserContext context)
     {
-        // Setext标题必须在未完成的段落块之后
+        var line = chunk.Text;
         if (line.Length > 0 && context.PreviousBlock is ParagraphBlock { Status: BlockStatus.Open })
         {
-            // 全都是=或者全都是-，并且至少有一个结束符
             while (line.Length > 0 && char.IsWhiteSpace(line[0]))
                 line = line[1..];
 
-            // 纯空白行不可能构成 Setext 标题
             if (line.Length == 0)
                 return MatchResult.NoMatch;
 
-            // 判断全都是=或者全都是-
             var c = line[0];
             if(c is '=' or '-')
             {
@@ -37,7 +34,6 @@ class SetextHeaderParser : IBlockParser
                     if (line[i] != c)
                         return MatchResult.NoMatch;
                 }
-                // 全部是 = 或 -，但没有 \n — 需要更多输入才能确认
                 return MatchResult.PartialMatch;
             }
         }

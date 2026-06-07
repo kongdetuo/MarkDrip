@@ -23,7 +23,7 @@ public class IndentedCodeBlockParserTests
     {
         var parser = new IndentedCodeBlockParser();
 
-        var result = parser.TryMatch(line, new ParserContext());
+        var result = parser.TryMatch(new TextChunk(line, false, line.Contains('\n')), new ParserContext());
 
         Assert.AreEqual(MatchResult.FullMatch, result);
     }
@@ -34,16 +34,25 @@ public class IndentedCodeBlockParserTests
     [DataRow(" text\n")]        // 1 space
     [DataRow("text\n")]         // 0 spaces
     [DataRow("\n")]             // blank
-    [DataRow("")]               // empty
     [DataRow("    \n")]         // 4 spaces but blank line
     [DataRow("     \n")]        // 5 spaces but blank line
     public void TryMatch_NotIndentedCode_ReturnsNoMatch(string line)
     {
         var parser = new IndentedCodeBlockParser();
 
-        var result = parser.TryMatch(line, new ParserContext());
+        var result = parser.TryMatch(new TextChunk(line, false, line.Contains('\n')), new ParserContext());
 
         Assert.AreEqual(MatchResult.NoMatch, result);
+    }
+
+    [TestMethod]
+    public void TryMatch_EmptyString_ReturnsPartialMatch()
+    {
+        var parser = new IndentedCodeBlockParser();
+
+        var result = parser.TryMatch(new TextChunk("", false, false), new ParserContext());
+
+        Assert.AreEqual(MatchResult.PartialMatch, result);
     }
 
     [TestMethod]
@@ -54,7 +63,7 @@ public class IndentedCodeBlockParserTests
         var context = new ParserContext();
         context.Blocks.Add(new ParagraphBlock { Status = BlockStatus.Open });
 
-        var result = parser.TryMatch("    code\n", context);
+        var result = parser.TryMatch(new TextChunk("    code\n", false, true), context);
 
         Assert.AreEqual(MatchResult.NoMatch, result);
     }
@@ -76,12 +85,13 @@ public class IndentedCodeBlockParserTests
     }
 
     [TestMethod]
-    public void OnMatch_Strips4Spaces()
+    public void OnMatch_DoesNotProcessContent()
     {
         var parser = new IndentedCodeBlockParser();
         var ctx = new ParserContext();
 
         parser.OnMatch("    hello\n", ctx);
+        parser.Append(new TextChunk("    hello\n", true, true), ctx);
 
         var code = (CodeBlock)ctx.Blocks[0];
         Assert.AreEqual("hello", code.Content.ToString());

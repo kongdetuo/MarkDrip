@@ -48,7 +48,7 @@ public class SetextHeaderParserTests
         var ctx = CreateContextWithOpenParagraph("some text");
         var parser = new SetextHeaderParser();
 
-        var result = parser.TryMatch(line, ctx);
+        var result = parser.TryMatch(new TextChunk(line, false, false), ctx);
 
         Assert.AreEqual(MatchResult.FullMatch, result);
     }
@@ -64,7 +64,7 @@ public class SetextHeaderParserTests
         var ctx = CreateContextWithOpenParagraph("some text");
         var parser = new SetextHeaderParser();
 
-        var result = parser.TryMatch(line, ctx);
+        var result = parser.TryMatch(new TextChunk(line, false, false), ctx);
 
         Assert.AreEqual(MatchResult.NoMatch, result);
     }
@@ -75,7 +75,7 @@ public class SetextHeaderParserTests
         var ctx = new ParserContext(); // no blocks
         var parser = new SetextHeaderParser();
 
-        var result = parser.TryMatch("====\n", ctx);
+        var result = parser.TryMatch(new TextChunk("====\n", false, false), ctx);
 
         Assert.AreEqual(MatchResult.NoMatch, result);
     }
@@ -89,7 +89,7 @@ public class SetextHeaderParserTests
         ctx.Blocks.Add(para);
         var parser = new SetextHeaderParser();
 
-        var result = parser.TryMatch("====\n", ctx);
+        var result = parser.TryMatch(new TextChunk("====\n", false, false), ctx);
 
         Assert.AreEqual(MatchResult.NoMatch, result);
     }
@@ -100,7 +100,7 @@ public class SetextHeaderParserTests
         var ctx = CreateContextWithOpenParagraph("text");
         var parser = new SetextHeaderParser();
 
-        var result = parser.TryMatch("====", ctx);
+        var result = parser.TryMatch(new TextChunk("====", false, false), ctx);
 
         Assert.AreEqual(MatchResult.PartialMatch, result);
     }
