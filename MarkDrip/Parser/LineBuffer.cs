@@ -10,9 +10,9 @@ public sealed class LineBuffer
 {
     private const int SegmentSize = 1024;
 
-    private readonly List<char[]> _segments = new();
+    internal readonly List<char[]> _segments = new();
     private int _length;
-    private int _lastSegFill; // 最后一个 segment 中已填充的字符数
+    internal int _lastSegFill; // 最后一个 segment 中已填充的字符数
 
     // 跨 segment 切片时的临时缓冲区（从 ArrayPool 租借）
     private char[]? _scratch;
@@ -142,8 +142,8 @@ public sealed class LineBuffer
 }
 
 /// <summary>
-/// LineBuffer 的只读视图，仅暴露 Length 和 Slice，供解析器写入 Append 方法使用。
-/// 实际写入仅由 StreamParser.Feed 通过其私有 _lineBuffer 完成，解析器不可修改。
+/// LineBuffer 的只读视图，通过段枚举避免跨段复制。
+/// 供解析器写入 Append 方法使用，实际写入仅由 StreamParser.Feed 完成。
 /// </summary>
 public readonly struct LineBufferView
 {
@@ -152,14 +152,51 @@ public readonly struct LineBufferView
     internal LineBufferView(LineBuffer buffer) => _buffer = buffer;
 
     /// <summary>缓冲区总字符数。</summary>
-    public int Length => _buffer.Length;
+    public int Length => _buffer is null ? 0 : _buffer.Length;
 
-    /// <summary>返回 [start, start+length) 范围内的字符跨度。</summary>
+    /// <summary>返回 [start, start+length) 范围内的字符跨度（可能触发跨段复制）。</summary>
     public ReadOnlySpan<char> Slice(int start, int length) => _buffer.Slice(start, length);
 
-    /// <summary>返回当前缓冲区的完整内容 span。</summary>
+    /// <summary>返回当前缓冲区的完整内容 span（可能触发跨段复制，仅用于过渡）。</summary>
     public ReadOnlySpan<char> AsSpan() => _buffer.Slice(0, _buffer.Length);
 
-    /// <summary>检查当前行是否为空白（去掉尾部换行后为空或全空白）。</summary>
-    public bool IsBlankLine() => TextUtils.IsBlankLine(AsSpan());
+    /// <summary>零分配逐段枚举。</summary>
+    public LineBufferSegmentEnumerator GetEnumerator()
+        => new LineBufferSegmentEnumerator(_buffer);
+
+    /// <summary>检查当前行是否为空白。</summary>
+    public bool IsBlankLine()
+    {
+        foreach (var seg in this)
+            if (!seg.IsWhiteSpace())
+                return false;
+        return true;
+    }
+}
+
+/// <summary>
+/// 零分配的段枚举器，foreach 使用，不触发跨段复制。
+/// </summary>
+public ref struct LineBufferSegmentEnumerator
+{
+    private readonly LineBuffer _buffer;
+    private int _index;
+
+    internal LineBufferSegmentEnumerator(LineBuffer? buffer)
+    {
+        _buffer = buffer!;
+        _index = -1;
+    }
+
+    public readonly ReadOnlySpan<char> Current
+    {
+        get
+        {
+            var seg = _buffer._segments[_index];
+            int len = _index < _buffer._segments.Count - 1 ? 1024 : _buffer._lastSegFill;
+            return seg.AsSpan(0, len);
+        }
+    }
+
+    public bool MoveNext() => _buffer is not null && ++_index < _buffer._segments.Count;
 }

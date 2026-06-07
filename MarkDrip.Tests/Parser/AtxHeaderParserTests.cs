@@ -38,7 +38,7 @@ public class AtxHeaderParserTests
         var parser = new AtxHeaderParser();
         var ctx = new ParserContext();
 
-        var result = parser.TryMatch(new TextChunk(line, false, false), ctx);
+        var result = parser.TryMatch(new TextChunk(line, false), ctx);
 
         Assert.AreEqual(MatchResult.FullMatch, result);
     }
@@ -51,7 +51,7 @@ public class AtxHeaderParserTests
         var parser = new AtxHeaderParser();
         var ctx = new ParserContext();
 
-        var result = parser.TryMatch(new TextChunk(line, false, false), ctx);
+        var result = parser.TryMatch(new TextChunk(line, false), ctx);
 
         Assert.AreEqual(MatchResult.FullMatch, result);
     }
@@ -66,7 +66,7 @@ public class AtxHeaderParserTests
         var parser = new AtxHeaderParser();
         var ctx = new ParserContext();
 
-        var result = parser.TryMatch(new TextChunk(line, false, false), ctx);
+        var result = parser.TryMatch(new TextChunk(line, false), ctx);
 
         Assert.AreEqual(MatchResult.NoMatch, result);
     }
@@ -80,7 +80,7 @@ public class AtxHeaderParserTests
         var parser = new AtxHeaderParser();
         var ctx = new ParserContext();
 
-        var result = parser.TryMatch(new TextChunk(line, false, false), ctx);
+        var result = parser.TryMatch(new TextChunk(line, false), ctx);
 
         Assert.AreEqual(MatchResult.NoMatch, result);
     }
@@ -94,7 +94,7 @@ public class AtxHeaderParserTests
         var parser = new AtxHeaderParser();
         var ctx = new ParserContext();
 
-        var result = parser.TryMatch(new TextChunk(line, false, false), ctx);
+        var result = parser.TryMatch(new TextChunk(line, false), ctx);
 
         Assert.AreEqual(MatchResult.NoMatch, result);
     }
@@ -108,7 +108,7 @@ public class AtxHeaderParserTests
         var parser = new AtxHeaderParser();
         var ctx = new ParserContext();
 
-        var result = parser.TryMatch(new TextChunk(line, false, false), ctx);
+        var result = parser.TryMatch(new TextChunk(line, false), ctx);
 
         Assert.AreEqual(MatchResult.PartialMatch, result);
     }
@@ -122,7 +122,7 @@ public class AtxHeaderParserTests
         var parser = new AtxHeaderParser();
         var ctx = new ParserContext();
 
-        var result = parser.TryMatch(new TextChunk(line + "\n", false, false), ctx);
+        var result = parser.TryMatch(new TextChunk(line + "\n", false), ctx);
 
         Assert.AreEqual(MatchResult.FullMatch, result);
     }
@@ -194,7 +194,7 @@ public class AtxHeaderParserTests
         var ctx = new ParserContext();
         parser.OnMatch(line, ctx);
 
-        var completed = parser.Append(new TextChunk(line, true, true), ctx);
+        var completed = parser.Append(new TextChunk(line, true), ctx);
 
         Assert.AreEqual(AppendResult.NextLineNeedMatch, completed);
         var heading = (HeadingBlock)ctx.Blocks[0];
@@ -209,7 +209,7 @@ public class AtxHeaderParserTests
         var line = "## Heading ##\n";
         parser.OnMatch(line, ctx);
 
-        var completed = parser.Append(new TextChunk(line, true, true), ctx);
+        var completed = parser.Append(new TextChunk(line, true), ctx);
 
         Assert.AreEqual(AppendResult.NextLineNeedMatch, completed);
         var heading = (HeadingBlock)ctx.Blocks[0];
@@ -224,7 +224,7 @@ public class AtxHeaderParserTests
         var line = "## Heading ###\n";
         parser.OnMatch(line, ctx);
 
-        parser.Append(new TextChunk(line, true, true), ctx);
+        parser.Append(new TextChunk(line, true), ctx);
 
         var heading = (HeadingBlock)ctx.Blocks[0];
         Assert.AreEqual("Heading", GetInlinesText(heading.Inlines));
@@ -238,7 +238,7 @@ public class AtxHeaderParserTests
         var line = "# \n";
         parser.OnMatch(line, ctx);
 
-        var completed = parser.Append(new TextChunk(line, true, true), ctx);
+        var completed = parser.Append(new TextChunk(line, true), ctx);
 
         Assert.AreEqual(AppendResult.NextLineNeedMatch, completed);
         var heading = (HeadingBlock)ctx.Blocks[0];
@@ -253,7 +253,7 @@ public class AtxHeaderParserTests
         var line = "#\n";
         parser.OnMatch(line, ctx);
 
-        var completed = parser.Append(new TextChunk(line, true, true), ctx);
+        var completed = parser.Append(new TextChunk(line, true), ctx);
 
         Assert.AreEqual(AppendResult.NextLineNeedMatch, completed);
         var heading = (HeadingBlock)ctx.Blocks[0];
@@ -268,7 +268,7 @@ public class AtxHeaderParserTests
         var line = "# Hello";
         parser.OnMatch(line, ctx);
 
-        var completed = parser.Append(new TextChunk(line, true, false), ctx);
+        var completed = parser.Append(new TextChunk(line, true), ctx);
 
         Assert.AreEqual(AppendResult.KeepFeeding, completed);
         var heading = (HeadingBlock)ctx.Blocks[0];
@@ -282,7 +282,7 @@ public class AtxHeaderParserTests
         var ctx = new ParserContext();
         parser.OnMatch("# Hello\n", ctx);
 
-        var completed = parser.Append(new TextChunk("# Hello\n", true, true), ctx);
+        var completed = parser.Append(new TextChunk("# Hello\n", true), ctx);
 
         Assert.AreEqual(AppendResult.NextLineNeedMatch, completed);
     }
@@ -295,7 +295,7 @@ public class AtxHeaderParserTests
         var line = "# Hello *World*\n";
         parser.OnMatch(line, ctx);
 
-        parser.Append(new TextChunk(line, true, true), ctx);
+        parser.Append(new TextChunk(line, true), ctx);
 
         var heading = (HeadingBlock)ctx.Blocks[0];
         // 原始缓冲区保留完整内容（含 *）
@@ -310,10 +310,10 @@ public class AtxHeaderParserTests
         parser.OnMatch("# hi", ctx);
 
         // Prior Append without newline
-        parser.Append(new TextChunk("# hi", true, false), ctx);
+        parser.Append(new TextChunk("# hi", true), ctx);
 
         // Newline-only chunk
-        var completed = parser.Append(new TextChunk("\n", false, true), ctx);
+        var completed = parser.Append(new TextChunk("\n", false), ctx);
 
         Assert.AreEqual(AppendResult.NextLineNeedMatch, completed);
         // Content unchanged
@@ -333,10 +333,10 @@ public class AtxHeaderParserTests
         parser.OnMatch("## Hel", ctx);
 
         // First call with same line (no newline)
-        parser.Append(new TextChunk("## Hel", true, false), ctx);
+        parser.Append(new TextChunk("## Hel", true), ctx);
 
         // Continuation
-        var completed = parser.Append(new TextChunk("lo\n", false, true), ctx);
+        var completed = parser.Append(new TextChunk("lo\n", false), ctx);
 
         Assert.AreEqual(AppendResult.NextLineNeedMatch, completed);
         var heading = (HeadingBlock)ctx.Blocks[0];
@@ -349,9 +349,9 @@ public class AtxHeaderParserTests
         var parser = new AtxHeaderParser();
         var ctx = new ParserContext();
         parser.OnMatch("# He", ctx);
-        parser.Append(new TextChunk("# He", true, false), ctx);
+        parser.Append(new TextChunk("# He", true), ctx);
 
-        var completed = parser.Append(new TextChunk("llo", false, false), ctx);
+        var completed = parser.Append(new TextChunk("llo", false), ctx);
 
         Assert.AreEqual(AppendResult.KeepFeeding, completed);
     }
@@ -362,9 +362,9 @@ public class AtxHeaderParserTests
         var parser = new AtxHeaderParser();
         var ctx = new ParserContext();
         parser.OnMatch("# He", ctx);
-        parser.Append(new TextChunk("# He", true, false), ctx);
+        parser.Append(new TextChunk("# He", true), ctx);
 
-        var completed = parser.Append(new TextChunk("llo\n", false, true), ctx);
+        var completed = parser.Append(new TextChunk("llo\n", false), ctx);
 
         Assert.AreEqual(AppendResult.NextLineNeedMatch, completed);
         var heading = (HeadingBlock)ctx.Blocks[0];
@@ -377,11 +377,11 @@ public class AtxHeaderParserTests
         var parser = new AtxHeaderParser();
         var ctx = new ParserContext();
         parser.OnMatch("## A", ctx);
-        parser.Append(new TextChunk("## A", true, false), ctx);     // first = "A"
-        parser.Append(new TextChunk("B", false, false), ctx);        // continuation
-        parser.Append(new TextChunk("C", false, false), ctx);        // continuation
+        parser.Append(new TextChunk("## A", true), ctx);     // first = "A"
+        parser.Append(new TextChunk("B", false), ctx);        // continuation
+        parser.Append(new TextChunk("C", false), ctx);        // continuation
 
-        var completed = parser.Append(new TextChunk("D\n", false, true), ctx);
+        var completed = parser.Append(new TextChunk("D\n", false), ctx);
 
         Assert.AreEqual(AppendResult.NextLineNeedMatch, completed);
         var heading = (HeadingBlock)ctx.Blocks[0];
@@ -398,9 +398,9 @@ public class AtxHeaderParserTests
         var parser = new AtxHeaderParser();
         var ctx = new ParserContext();
         parser.OnMatch("# Hello", ctx);
-        parser.Append(new TextChunk("# Hello", true, false), ctx);
+        parser.Append(new TextChunk("# Hello", true), ctx);
 
-        var result = parser.Append(new TextChunk("#", false, false), ctx);
+        var result = parser.Append(new TextChunk("#", false), ctx);
 
         Assert.AreEqual(AppendResult.NeedNextChunk, result);
     }
@@ -411,9 +411,9 @@ public class AtxHeaderParserTests
         var parser = new AtxHeaderParser();
         var ctx = new ParserContext();
         parser.OnMatch("## Hello", ctx);
-        parser.Append(new TextChunk("## Hello", true, false), ctx);
+        parser.Append(new TextChunk("## Hello", true), ctx);
 
-        var result = parser.Append(new TextChunk(" #", false, false), ctx);
+        var result = parser.Append(new TextChunk(" #", false), ctx);
 
         Assert.AreEqual(AppendResult.NeedNextChunk, result);
         var heading = (HeadingBlock)ctx.Blocks[0];
@@ -583,7 +583,7 @@ public class AtxHeaderParserTests
         var ctx = new ParserContext();
         ctx.Blocks.Add(new ParagraphBlock());
 
-        var result = parser.TryMatch(new TextChunk("# heading", false, false), ctx);
+        var result = parser.TryMatch(new TextChunk("# heading", false), ctx);
 
         Assert.AreEqual(MatchResult.FullMatch, result);
     }
@@ -595,7 +595,7 @@ public class AtxHeaderParserTests
         var ctx = new ParserContext();
         ctx.Blocks.Add(new ParagraphBlock()); // wrong block type
 
-        var result = parser.Append(new TextChunk("# text\n", true, true), ctx);
+        var result = parser.Append(new TextChunk("# text\n", true), ctx);
 
         Assert.AreEqual(AppendResult.NextLineNeedMatch, result, "Should return NeedMatch to relinquish control when block type mismatch");
     }

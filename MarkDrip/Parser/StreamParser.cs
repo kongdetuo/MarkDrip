@@ -78,10 +78,9 @@ class StreamParser : IBlockParser
             if (_pendingBuffer.Length > segment.Length)
                 segment = _pendingBuffer.ToString().AsSpan();
 
-            bool isLineStart = _currentLine.Length == segment.Length; // _currentLine 从行首累积，如果跟当前块长度一样，那自然是从行首开始的
             bool isLineEnd = segment.EndsWith("\n") || segment.EndsWith("\r");
 
-            var chuck = new TextChunk(segment, isLineStart, isLineEnd);
+            var chuck = new TextChunk(segment, new LineBufferView(_currentLine));
             var result = this.Append(chuck, context);
 
             if (result == AppendResult.ReMatch)
@@ -89,7 +88,7 @@ class StreamParser : IBlockParser
                 // 当前解析器要求重新匹配当前行，那我们就重新匹配一次。
                 // 注意解析器可能吃掉了一些内容，所以我们需要将当前整行的内容都重新匹配，而不是只匹配当前这一小块
                 currentParser = null;
-                var line = new TextChunk(_currentLine.Slice(0, _currentLine.Length), true, chuck.IsLineEnd);
+                var line = new TextChunk(_currentLine.Slice(0, _currentLine.Length), new LineBufferView(_currentLine));
                 result = this.Append(line, context);
             }
 

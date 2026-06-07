@@ -19,12 +19,22 @@ public readonly ref struct TextChunk
 {
     public readonly ReadOnlySpan<char> Text;
     public readonly bool IsLineStart;
-    public readonly bool IsLineEnd;
-    public TextChunk(ReadOnlySpan<char> text, bool isLineStart, bool isLineEnd)
+    public readonly LineBufferView OwnerLine;
+
+    public bool IsLineEnd => Text.Length > 0 && (Text[^1] == '\n' || Text[^1] == '\r');
+
+    public TextChunk(ReadOnlySpan<char> text, bool isLineStart)
     {
         Text = text;
         IsLineStart = isLineStart;
-        IsLineEnd = isLineEnd;
+        OwnerLine = default;
+    }
+
+    public TextChunk(ReadOnlySpan<char> text, LineBufferView ownerLine)
+    {
+        Text = text;
+        OwnerLine = ownerLine;
+        IsLineStart = text.Length == ownerLine.Length;
     }
 
     public bool IsBlank => TextUtils.IsWhitespaceOnly(Text);

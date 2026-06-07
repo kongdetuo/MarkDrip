@@ -23,7 +23,7 @@ public class IndentedCodeBlockParserTests
     {
         var parser = new IndentedCodeBlockParser();
 
-        var result = parser.TryMatch(new TextChunk(line, false, line.Contains('\n')), new ParserContext());
+        var result = parser.TryMatch(new TextChunk(line, false), new ParserContext());
 
         Assert.AreEqual(MatchResult.FullMatch, result);
     }
@@ -40,7 +40,7 @@ public class IndentedCodeBlockParserTests
     {
         var parser = new IndentedCodeBlockParser();
 
-        var result = parser.TryMatch(new TextChunk(line, false, line.Contains('\n')), new ParserContext());
+        var result = parser.TryMatch(new TextChunk(line, false), new ParserContext());
 
         Assert.AreEqual(MatchResult.NoMatch, result);
     }
@@ -50,7 +50,7 @@ public class IndentedCodeBlockParserTests
     {
         var parser = new IndentedCodeBlockParser();
 
-        var result = parser.TryMatch(new TextChunk("", false, false), new ParserContext());
+        var result = parser.TryMatch(new TextChunk("", false), new ParserContext());
 
         Assert.AreEqual(MatchResult.PartialMatch, result);
     }
@@ -63,7 +63,7 @@ public class IndentedCodeBlockParserTests
         var context = new ParserContext();
         context.Blocks.Add(new ParagraphBlock { Status = BlockStatus.Open });
 
-        var result = parser.TryMatch(new TextChunk("    code\n", false, true), context);
+        var result = parser.TryMatch(new TextChunk("    code\n", false), context);
 
         Assert.AreEqual(MatchResult.NoMatch, result);
     }
@@ -91,7 +91,7 @@ public class IndentedCodeBlockParserTests
         var ctx = new ParserContext();
 
         parser.OnMatch("    hello\n", ctx);
-        parser.Append(new TextChunk("    hello\n", true, true), ctx);
+        parser.Append(new TextChunk("    hello\n", true), ctx);
         parser.Complete(ctx);
         var code = (CodeBlock)ctx.Blocks[0];
         Assert.AreEqual("hello", code.Content.ToString());

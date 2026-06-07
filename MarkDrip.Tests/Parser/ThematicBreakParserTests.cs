@@ -29,7 +29,7 @@ public class ThematicBreakParserTests
     {
         var parser = new ThematicBreakParser();
 
-        var result = parser.TryMatch(new TextChunk(line, false, false), new ParserContext());
+        var result = parser.TryMatch(new TextChunk(line, false), new ParserContext());
 
         Assert.AreEqual(MatchResult.FullMatch, result);
     }
@@ -46,7 +46,7 @@ public class ThematicBreakParserTests
     {
         var parser = new ThematicBreakParser();
 
-        var result = parser.TryMatch(new TextChunk(line, false, false), new ParserContext());
+        var result = parser.TryMatch(new TextChunk(line, false), new ParserContext());
 
         Assert.AreEqual(MatchResult.NoMatch, result);
     }
@@ -59,7 +59,7 @@ public class ThematicBreakParserTests
         var context = new ParserContext();
         context.Blocks.Add(new ParagraphBlock { Status = BlockStatus.Open });
 
-        var result = parser.TryMatch(new TextChunk("---\n", false, false), context);
+        var result = parser.TryMatch(new TextChunk("---\n", false), context);
 
         Assert.AreEqual(MatchResult.NoMatch, result);
     }
@@ -72,7 +72,7 @@ public class ThematicBreakParserTests
         var context = new ParserContext();
         context.Blocks.Add(new ParagraphBlock { Status = BlockStatus.Open });
 
-        var result = parser.TryMatch(new TextChunk("***\n", false, false), context);
+        var result = parser.TryMatch(new TextChunk("***\n", false), context);
 
         Assert.AreEqual(MatchResult.FullMatch, result);
     }
@@ -85,7 +85,7 @@ public class ThematicBreakParserTests
         var context = new ParserContext();
         context.Blocks.Add(new ParagraphBlock { Status = BlockStatus.Finalized });
 
-        var result = parser.TryMatch(new TextChunk("---\n", false, false), context);
+        var result = parser.TryMatch(new TextChunk("---\n", false), context);
 
         Assert.AreEqual(MatchResult.FullMatch, result);
     }
@@ -112,7 +112,7 @@ public class ThematicBreakParserTests
     {
         var parser = new ThematicBreakParser();
 
-        var result = parser.Append(new TextChunk("anything\n", false, false), new ParserContext());
+        var result = parser.Append(new TextChunk("anything\n", false), new ParserContext());
 
         Assert.AreEqual(AppendResult.NextLineNeedMatch, result);
     }

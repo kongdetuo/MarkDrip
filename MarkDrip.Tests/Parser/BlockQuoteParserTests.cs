@@ -38,7 +38,7 @@ public class BlockQuoteParserTests
     public void TryMatch_StartsWithGtAtLineStart_ReturnsFullMatch(string line)
     {
         var parser = new BlockQuoteParser();
-        var result = parser.TryMatch(new TextChunk(line, true, false), new ParserContext());
+        var result = parser.TryMatch(new TextChunk(line, true), new ParserContext());
         Assert.AreEqual(MatchResult.FullMatch, result);
     }
 
@@ -52,7 +52,7 @@ public class BlockQuoteParserTests
     {
         var parser = new BlockQuoteParser();
         var isLineEnd = line.Contains('\n') || line.Contains('\r');
-        var result = parser.TryMatch(new TextChunk(line, true, isLineEnd), new ParserContext());
+        var result = parser.TryMatch(new TextChunk(line, true), new ParserContext());
         Assert.AreEqual(MatchResult.NoMatch, result);
     }
 
@@ -65,7 +65,7 @@ public class BlockQuoteParserTests
     public void TryMatch_BlankAtLineStartNotLineEnd_ReturnsPartialMatch(string line)
     {
         var parser = new BlockQuoteParser();
-        var result = parser.TryMatch(new TextChunk(line, true, false), new ParserContext());
+        var result = parser.TryMatch(new TextChunk(line, true), new ParserContext());
         Assert.AreEqual(MatchResult.PartialMatch, result);
     }
 
@@ -105,7 +105,7 @@ public class BlockQuoteParserTests
     public void Append_BeforeOnMatch_ReturnsNextLineNeedMatch()
     {
         var parser = new BlockQuoteParser();
-        var result = parser.Append(new TextChunk("> text\n", true, true), new ParserContext());
+        var result = parser.Append(new TextChunk("> text\n", true), new ParserContext());
         Assert.AreEqual(AppendResult.NextLineNeedMatch, result);
     }
 
@@ -116,7 +116,7 @@ public class BlockQuoteParserTests
         var ctx = new ParserContext();
         parser.OnMatch("> text\n", ctx);
 
-        var result = parser.Append(new TextChunk(" more\n", false, true), ctx);
+        var result = parser.Append(new TextChunk(" more\n", false), ctx);
 
         Assert.AreEqual(AppendResult.KeepFeeding, result);
     }
@@ -128,7 +128,7 @@ public class BlockQuoteParserTests
         var ctx = new ParserContext();
         parser.OnMatch("> text\n", ctx);
 
-        var result = parser.Append(new TextChunk("  ", true, false), ctx);
+        var result = parser.Append(new TextChunk("  ", true), ctx);
 
         Assert.AreEqual(AppendResult.NeedNextChunk, result);
     }
@@ -140,7 +140,7 @@ public class BlockQuoteParserTests
         var ctx = new ParserContext();
         parser.OnMatch("> A wise quote.\n", ctx);
 
-        var result = parser.Append(new TextChunk("> A wise quote.\n", true, true), ctx);
+        var result = parser.Append(new TextChunk("> A wise quote.\n", true), ctx);
 
         Assert.AreEqual(AppendResult.KeepFeeding, result);
         var quote = (BlockQuoteBlock)ctx.Blocks[0];
@@ -156,7 +156,7 @@ public class BlockQuoteParserTests
         var ctx = new ParserContext();
         parser.OnMatch("  > text\n", ctx);
 
-        parser.Append(new TextChunk("  > text\n", true, true), ctx);
+        parser.Append(new TextChunk("  > text\n", true), ctx);
 
         var quote = (BlockQuoteBlock)ctx.Blocks[0];
         var para = (ParagraphBlock)quote.Children[0];
@@ -169,9 +169,9 @@ public class BlockQuoteParserTests
         var parser = new BlockQuoteParser();
         var ctx = new ParserContext();
         parser.OnMatch("> text\n", ctx);
-        parser.Append(new TextChunk("> text\n", true, true), ctx);
+        parser.Append(new TextChunk("> text\n", true), ctx);
 
-        var result = parser.Append(new TextChunk(">\n", true, true), ctx);
+        var result = parser.Append(new TextChunk(">\n", true), ctx);
 
         Assert.AreEqual(AppendResult.KeepFeeding, result);
     }
@@ -183,7 +183,7 @@ public class BlockQuoteParserTests
         var ctx = new ParserContext();
         parser.OnMatch("> text\n", ctx);
 
-        var result = parser.Append(new TextChunk(">", true, false), ctx);
+        var result = parser.Append(new TextChunk(">", true), ctx);
 
         Assert.AreEqual(AppendResult.NeedNextChunk, result);
     }
@@ -194,9 +194,9 @@ public class BlockQuoteParserTests
         var parser = new BlockQuoteParser();
         var ctx = new ParserContext();
         parser.OnMatch("> text\n", ctx);
-        parser.Append(new TextChunk("> text\n", true, true), ctx);
+        parser.Append(new TextChunk("> text\n", true), ctx);
 
-        var result = parser.Append(new TextChunk("\n", true, true), ctx);
+        var result = parser.Append(new TextChunk("\n", true), ctx);
 
         Assert.AreEqual(AppendResult.NextLineNeedMatch, result);
     }
@@ -207,9 +207,9 @@ public class BlockQuoteParserTests
         var parser = new BlockQuoteParser();
         var ctx = new ParserContext();
         parser.OnMatch("> quote\n", ctx);
-        parser.Append(new TextChunk("> quote\n", true, true), ctx);
+        parser.Append(new TextChunk("> quote\n", true), ctx);
 
-        var result = parser.Append(new TextChunk("lazy continuation\n", true, true), ctx);
+        var result = parser.Append(new TextChunk("lazy continuation\n", true), ctx);
 
         Assert.AreEqual(AppendResult.KeepFeeding, result);
         var quote = (BlockQuoteBlock)ctx.Blocks[0];
@@ -223,8 +223,8 @@ public class BlockQuoteParserTests
         var parser = new BlockQuoteParser();
         var ctx = new ParserContext();
         parser.OnMatch("> first\n", ctx);
-        parser.Append(new TextChunk("> first\n", true, true), ctx);
-        parser.Append(new TextChunk("> second\n", true, true), ctx);
+        parser.Append(new TextChunk("> first\n", true), ctx);
+        parser.Append(new TextChunk("> second\n", true), ctx);
 
         var quote = (BlockQuoteBlock)ctx.Blocks[0];
         Assert.AreEqual(1, quote.Children.Count);
